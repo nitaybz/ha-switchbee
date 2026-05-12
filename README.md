@@ -1,8 +1,7 @@
 # ha-switchbee
 
-<p align="center">
-  <img src="logo.png" alt="SwitchBee" height="120">
-</p>
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A Home Assistant custom integration for the **SwitchBee Central Unit**, talking to the CU directly over its local WebSocket protocol on port `7891`. No cloud, no homebridge bridge, no HomeKit pairing dance. Push-based state updates from the CU surface as native HA state changes within ~1 second.
 
@@ -55,13 +54,12 @@ A separate migration tool (Phase 5) takes a stopped Home Assistant, finds the Sw
 
 ## Branding
 
-The integration ships its brand mark in-repo. HACS renders these in the HA frontend, and HA core falls back to the in-package copies when it does not find a `brands.home-assistant.io` entry. No external brand submission is required for the integration to display correctly.
+The integration's brand mark lives in `custom_components/ha_switchbee/brand/`:
 
 - `icon.png` (256x256, transparent canvas, SwitchBee wordmark centered)
 - `icon@2x.png` (512x512 retina)
 - `logo.png` (790x256, full SwitchBee wordmark + tagline)
 - `logo@2x.png` (1580x512 retina)
-- The same four files mirrored under `custom_components/ha_switchbee/brands/` so HA core's fallback path also finds them.
 
 ## License
 
