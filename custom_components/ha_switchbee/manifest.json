@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "codeowners": ["@nitaybz"],
   "config_flow": true,
-  "iot_class": "local_push",
   "documentation": "https://github.com/nitaybz/ha-switchbee",
+  "integration_type": "hub",
+  "iot_class": "local_push",
   "issue_tracker": "https://github.com/nitaybz/ha-switchbee/issues",
   "requirements": [],
-  "dependencies": [],
-  "homeassistant": "2024.1.0"
+  "dependencies": []
 }
