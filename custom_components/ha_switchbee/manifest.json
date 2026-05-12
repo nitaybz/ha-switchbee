@@ -1,13 +1,13 @@
 {
   "domain": "ha_switchbee",
   "name": "SwitchBee Local",
-  "version": "0.1.0",
   "codeowners": ["@nitaybz"],
   "config_flow": true,
+  "dependencies": [],
   "documentation": "https://github.com/nitaybz/ha-switchbee",
   "integration_type": "hub",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/nitaybz/ha-switchbee/issues",
   "requirements": [],
-  "dependencies": []
+  "version": "0.1.0"
 }
