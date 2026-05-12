@@ -36,6 +36,17 @@ from tests.fake_cu import FAKE_TOKEN, SAMPLE_MAC, FakeCU
 # ---------------------------------------------------------------------------
 
 
+# pytest-homeassistant-custom-component (added in Phase 3) installs
+# `pytest_socket` and disables all real sockets by default. These tests use an
+# in-process WebSocket fake CU that binds to 127.0.0.1, so they need real
+# socket access. The `socket_enabled` fixture is provided by pytest_socket and
+# re-enables sockets for the test that requests it.
+@pytest.fixture(autouse=True)
+def _enable_sockets(socket_enabled):
+    """Enable real socket I/O for every test in this module."""
+    yield
+
+
 @pytest.fixture
 async def http_session():
     """An aiohttp session scoped to a single test."""
