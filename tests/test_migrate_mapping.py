@@ -261,3 +261,168 @@ def test_mapping_row_is_dataclass_with_named_fields() -> None:
     )
     assert row.entity_id == "cover.x"
     assert row.action == "keep_homekit"
+
+
+# ----- SerialNumber-based primary mapping path (Phase 5 revised, Decision #9
+# revised after live verification on the STE Smart Home CU) -----
+
+
+def _device(
+    *, device_id: str, serial_number: str | None
+) -> dict[str, object]:
+    """Build a minimal HA device_registry row for SN-based mapping tests."""
+    return {
+        "id": device_id,
+        "serial_number": serial_number,
+        "identifiers": [["homekit_controller:accessory-id", "dummy"]],
+    }
+
+
+def test_sn_path_resolves_when_name_does_not_match() -> None:
+    """SerialNumber-based mapping succeeds even when CU was renamed since pairing.
+
+    Reproduces the live finding on Moshe's STE Smart Home CU: HA still has
+    the old `Cistercian Outside ` original_name, but the CU has since
+    renamed the item, so name matching returns no candidate. The SN
+    `REGULAR_SWITCH_ID152` recovers item.id 152 directly.
+    """
+    cu_devices = {
+        152: {"id": 152, "name": "Visteria", "type": "SWITCH", "zone": "Outside "},
+    }
+    ha_devices = [
+        _device(
+            device_id="0718733d39d3a5809459bd50ad12c41b",
+            serial_number="REGULAR_SWITCH_ID152",
+        )
+    ]
+    entities = [
+        {
+            "entity_id": "switch.cistercian_outside",
+            "unique_id": f"{BRIDGE_MAC}_31_8",
+            "original_name": "Cistercian Outside ",
+            "platform": "homekit_controller",
+            "area_id": None,
+            "device_id": "0718733d39d3a5809459bd50ad12c41b",
+        }
+    ]
+    rows = map_entities(
+        entities,
+        cu_devices=cu_devices,
+        cu_mac=CU_MAC,
+        bridge_mac=BRIDGE_MAC,
+        ha_devices=ha_devices,
+    )
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.action == "migrate"
+    assert row.confidence == "high"
+    assert row.new_unique_id == f"{CU_MAC}_152"
+    assert row.item_id == 152
+    assert row.sb_type == "SWITCH"
+    assert row.reason == "HomeKit SerialNumber -> item.id"
+
+
+def test_sn_path_supports_somfy_serial_prefix() -> None:
+    """SOMFY accessories use SN prefix `SOMFY_ID<n>`."""
+    cu_devices = {
+        471: {"id": 471, "name": "Blind 2", "type": "SOMFY", "zone": "Living Room"},
+    }
+    ha_devices = [_device(device_id="dev-somfy", serial_number="SOMFY_ID471")]
+    entities = [
+        {
+            "entity_id": "cover.blind_2_living_room",
+            "unique_id": f"{BRIDGE_MAC}_75_8",
+            "original_name": "Blind 2 Living Room ",
+            "platform": "homekit_controller",
+            "device_id": "dev-somfy",
+        }
+    ]
+    rows = map_entities(
+        entities,
+        cu_devices=cu_devices,
+        cu_mac=CU_MAC,
+        bridge_mac=BRIDGE_MAC,
+        ha_devices=ha_devices,
+    )
+    assert rows[0].action == "migrate"
+    assert rows[0].new_unique_id == f"{CU_MAC}_471"
+    assert rows[0].sb_type == "SOMFY"
+
+
+def test_sn_path_falls_back_to_name_when_serial_missing() -> None:
+    """When ha_devices does not have the entity's device_id, fall back to name."""
+    cu_devices = {
+        42: {"id": 42, "name": "Test", "type": "SWITCH", "zone": "Living Room"},
+    }
+    ha_devices: list[dict] = []  # empty -> SN path produces no match
+    entities = [
+        {
+            "entity_id": "switch.test_living_room",
+            "unique_id": f"{BRIDGE_MAC}_5_8",
+            "original_name": "Test Living Room",
+            "platform": "homekit_controller",
+            "device_id": "missing",
+        }
+    ]
+    rows = map_entities(
+        entities,
+        cu_devices=cu_devices,
+        cu_mac=CU_MAC,
+        bridge_mac=BRIDGE_MAC,
+        ha_devices=ha_devices,
+    )
+    assert rows[0].action == "migrate"
+    assert rows[0].confidence == "high"
+    assert rows[0].reason == "exact match on (name + zone)"
+
+
+def test_sn_path_respects_keep_homekit_types() -> None:
+    """SN finds the item but the type is TWO_WAY -> keep_homekit."""
+    cu_devices = {
+        99: {"id": 99, "name": "Two Way", "type": "TWO_WAY", "zone": "Hall"},
+    }
+    ha_devices = [_device(device_id="dev-twoway", serial_number="TWO_WAY_ID99")]
+    entities = [
+        {
+            "entity_id": "switch.two_way_hall",
+            "unique_id": f"{BRIDGE_MAC}_77_8",
+            "original_name": "Two Way Hall",
+            "platform": "homekit_controller",
+            "device_id": "dev-twoway",
+        }
+    ]
+    rows = map_entities(
+        entities,
+        cu_devices=cu_devices,
+        cu_mac=CU_MAC,
+        bridge_mac=BRIDGE_MAC,
+        ha_devices=ha_devices,
+    )
+    assert rows[0].action == "keep_homekit"
+    assert rows[0].item_id == 99
+    assert rows[0].sb_type == "TWO_WAY"
+
+
+def test_sn_path_ignores_non_id_serials() -> None:
+    """The bridge's own SerialNumber is just the MAC; should not match."""
+    cu_devices: dict = {}
+    ha_devices = [_device(device_id="dev-bridge", serial_number="0E:0F:B5:1B:3D:37")]
+    entities = [
+        {
+            "entity_id": "button.homebridge_switchbee_8db0_identify",
+            "unique_id": f"{BRIDGE_MAC}_1_1_2",
+            "original_name": "homebridge-switchbee 8DB0 Identify",
+            "platform": "homekit_controller",
+            "device_id": "dev-bridge",
+        }
+    ]
+    rows = map_entities(
+        entities,
+        cu_devices=cu_devices,
+        cu_mac=CU_MAC,
+        bridge_mac=BRIDGE_MAC,
+        ha_devices=ha_devices,
+    )
+    # button.*_identify always deletes; SN doesn't matter, the identify
+    # short-circuit still fires.
+    assert rows[0].action == "delete"

@@ -1,19 +1,39 @@
 """Mapping algorithm for the ha-switchbee migration tool.
 
-Phase 5 / Mapping Algorithm (plan Decision #9). The mapper consumes:
+Phase 5 / Mapping Algorithm. The mapper consumes:
 
 - a list of HA `homekit_controller` entity-registry rows whose unique_id
   begins with the SwitchBee bridge MAC
-- the flat homebridge `switchbee-configuration` cache `{item_id: {id, name, hw, type, zone}, ...}`
-- the HA `area_registry` (used only for the tie-breaker)
+- the HA `device_registry` rows (used to extract the SerialNumber that
+  homebridge-switchbee bakes into each HomeKit accessory at pairing time:
+  `device.hw + '_ID' + device.id` per `homebridge-switchbee/SwitchBee/unified.js:48`).
+  This is the PRIMARY mapping path. It is name-independent, rename-proof,
+  and matches the structural identity homebridge-switchbee assigns at
+  pairing.
+- the flat homebridge `switchbee-configuration` cache
+  `{item_id: {id, name, hw, type, zone}, ...}`, used only to look up the
+  SwitchBee `type` field given an item_id (so we can decide whether the
+  item is in v1 scope or a keep_homekit type like SENSOR / TWO_WAY).
+- the HA `area_registry` (used only for the legacy name-match tie-breaker
+  fallback path).
 
 and produces a `MappingRow` per HA entity describing the proposed action
 (`migrate`, `delete`, `keep_homekit`) with a confidence tier (`high`,
 `medium`, `low`).
 
-The name index key is `normalize_name(item.name + " " + zone.name)` per the
-verified homebridge Switch.js:20 format. Both `_aid_iid` (2-part) and
-`_aid_sid_iid` (3-part) homekit unique_id shapes are accepted.
+PRIMARY algorithm (Decision #9, revised after live verification on the
+STE Smart Home CU): for each HA entity, resolve its `device_id` to a
+device_registry row, extract `serial_number` (e.g. `REGULAR_SWITCH_ID152`,
+`SOMFY_ID471`, `DIMMABLE_SWITCH_ID1`), parse the trailing `_ID<n>` to
+recover the SwitchBee `item.id`. The new unique_id is `{cu_mac}_{item_id}`.
+
+FALLBACK (when the device_registry has no usable SerialNumber for an
+entity): name-match the entity's `original_name` against the CU's
+`name + " " + zone` index. This is the older mapping path retained for
+robustness when SerialNumber is missing.
+
+Both `_aid_iid` (2-part) and `_aid_sid_iid` (3-part) homekit unique_id
+shapes are accepted.
 
 This module is pure Python with no `homeassistant.*` import so it can be
 unit-tested in a plain Python 3.12 venv.
@@ -37,6 +57,12 @@ _KEEP_HOMEKIT_TYPES: frozenset[str] = frozenset(
 
 # Whitespace runs (one or more whitespace chars).
 _WS_RE = re.compile(r"\s+")
+
+# SerialNumber suffix as set by homebridge-switchbee/SwitchBee/unified.js:48
+# (`serial: device.hw + '_ID' + device.id`). The hardware-model prefix
+# varies (`REGULAR_SWITCH`, `DIMMABLE_SWITCH`, `SOMFY`, etc) but the
+# `_ID<digits>` suffix is invariant.
+_SN_ID_RE = re.compile(r"_ID(\d+)$")
 
 Confidence = Literal["high", "medium", "low"]
 Action = Literal["migrate", "delete", "keep_homekit"]
@@ -140,6 +166,32 @@ def _resolve_area_name(
     return normalize_name(name)
 
 
+def _build_device_serial_index(
+    devices: Iterable[Mapping[str, Any]] | None,
+) -> dict[str, int]:
+    """Build `{device_id: item_id}` from HA device_registry rows.
+
+    Parses each row's `serial_number` field with the `_ID<digits>$` regex.
+    Devices whose serial does not match (the bridge itself, third-party
+    devices) are omitted, so callers see `None` on lookup.
+    """
+    out: dict[str, int] = {}
+    if not devices:
+        return out
+    for d in devices:
+        dev_id = d.get("id")
+        sn = d.get("serial_number")
+        if not dev_id or not sn:
+            continue
+        m = _SN_ID_RE.search(str(sn))
+        if m:
+            try:
+                out[str(dev_id)] = int(m.group(1))
+            except ValueError:  # pragma: no cover
+                continue
+    return out
+
+
 def map_entities(
     entities: Iterable[Mapping[str, Any]],
     *,
@@ -147,6 +199,7 @@ def map_entities(
     cu_mac: str,
     bridge_mac: str,
     area_registry: Mapping[str, str] | None = None,
+    ha_devices: Iterable[Mapping[str, Any]] | None = None,
 ) -> list[MappingRow]:
     """Map every homekit_controller SwitchBee entity to a proposed action.
 
@@ -155,19 +208,34 @@ def map_entities(
             responsible for filtering by `platform == "homekit_controller"`
             and `unique_id.startswith(bridge_mac + "_")`. The mapper applies
             the same checks defensively.
-        cu_devices: flat homebridge `switchbee-configuration` map.
+        cu_devices: flat homebridge `switchbee-configuration` map. Used to
+            look up the SwitchBee `type` field given an item_id (so we
+            can decide v1 scope vs keep_homekit types like SENSOR / TWO_WAY).
         cu_mac: normalized 12-hex CU MAC (lowercase, no separators).
         bridge_mac: the homekit_controller bridge MAC prefix (with the same
             separator style as the source unique_ids; uppercase with colons
             on Moshe's device).
         area_registry: optional `{area_id: area_name}` map for the
-            zone-vs-area tie-breaker. May be None when running against a
-            fixture without area data.
+            zone-vs-area tie-breaker in the name-match fallback path.
+        ha_devices: optional iterable of HA device_registry rows. When
+            provided, the mapper uses the PRIMARY SerialNumber-based path
+            (resolves entity.device_id -> serial_number -> _ID<n> -> item.id).
+            When omitted, the mapper falls back to the name-match path.
 
     Returns:
         One `MappingRow` per input entity.
     """
     index = _build_cu_name_index(cu_devices)
+    device_serial_index = _build_device_serial_index(ha_devices)
+    # Normalize cu_devices key to int so SN-resolved item_ids can look up
+    # the type field regardless of whether the JSON wrote ids as strings.
+    cu_by_int_id: dict[int, Mapping[str, Any]] = {}
+    for k, v in cu_devices.items():
+        try:
+            cu_by_int_id[int(k)] = v
+        except (TypeError, ValueError):  # pragma: no cover
+            continue
+
     rows: list[MappingRow] = []
     for raw in entities:
         entity_id = str(raw.get("entity_id", ""))
@@ -193,6 +261,28 @@ def map_entities(
             )
             continue
 
+        # PRIMARY: SerialNumber-based lookup.
+        device_id = raw.get("device_id")
+        if device_id and device_serial_index:
+            item_id = device_serial_index.get(str(device_id))
+            if item_id is not None:
+                # Found via SerialNumber. Look up type from CU map for the
+                # keep_homekit gate. If the CU doesn't know about this id
+                # (stale homebridge persist), we still migrate but flag it.
+                candidate = cu_by_int_id.get(item_id) or {"id": item_id}
+                rows.append(
+                    _row_for_candidate(
+                        entity_id=entity_id,
+                        unique_id=unique_id,
+                        candidate=candidate,
+                        cu_mac=cu_mac,
+                        confidence="high",
+                        reason="HomeKit SerialNumber -> item.id",
+                    )
+                )
+                continue
+
+        # FALLBACK: name match against the CU index (legacy path).
         original_name = str(raw.get("original_name", "") or "")
         key = normalize_name(original_name)
         candidates = index.get(key, [])
@@ -242,7 +332,7 @@ def map_entities(
             )
             continue
 
-        # No candidates by full normalized name. Mark as keep_homekit / low.
+        # No candidates by SerialNumber or name. Mark as keep_homekit / low.
         rows.append(
             MappingRow(
                 entity_id=entity_id,
@@ -250,7 +340,7 @@ def map_entities(
                 new_unique_id=None,
                 confidence="low",
                 action="keep_homekit",
-                reason="no CU device matched original_name",
+                reason="no CU device matched (SerialNumber and name)",
             )
         )
     return rows

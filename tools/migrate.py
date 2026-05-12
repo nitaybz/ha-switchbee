@@ -75,10 +75,11 @@ from tools._migrate.homebridge_reader import (  # noqa: E402
     load_switchbee_configuration,
 )
 from tools._migrate.mapper import map_entities  # noqa: E402
-from tools._migrate.registry_reader import (  # noqa: E402
+from tools._migrate.registry_reader import (  # noqa: E402, F401
     UnsupportedRegistryVersionError,
     filter_homekit_switchbee,
     load_area_registry,
+    load_device_registry,
     load_entity_registry,
 )
 from tools._migrate.report import write_reports  # noqa: E402
@@ -261,14 +262,19 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 6
 
-    # 5. Build the mapping.
+    # 5. Build the mapping. PRIMARY path is SerialNumber-based via HA's
+    # device_registry; the legacy name-match path is the fallback when SN
+    # is absent. Loading ha_devices makes the mapper rename-proof against
+    # any CU-side name changes after pairing.
     area_registry = load_area_registry(args.ha_storage / "core.area_registry")
+    ha_devices = load_device_registry(args.ha_storage / "core.device_registry")
     rows = map_entities(
         homekit_entries,
         cu_devices=cu_devices,
         cu_mac=cu_mac,
         bridge_mac=args.bridge_mac,
         area_registry=area_registry,
+        ha_devices=ha_devices,
     )
 
     # 6. Write reports.

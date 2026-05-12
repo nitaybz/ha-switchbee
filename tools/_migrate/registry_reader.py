@@ -93,11 +93,28 @@ def load_area_registry(path: Path) -> dict[str, str]:
     return {a["id"]: a.get("name", "") for a in areas if "id" in a}
 
 
+def load_device_registry(path: Path) -> list[Mapping[str, Any]]:
+    """Load `core.device_registry` and return the `devices` array.
+
+    The mapper uses `serial_number` per row to extract the SwitchBee
+    item.id from each homebridge-paired accessory's HomeKit metadata
+    (`device.hw + "_ID" + device.id`, set by
+    `homebridge-switchbee/SwitchBee/unified.js:48`). Returns an empty
+    list if the file is missing (mapper falls back to name matching).
+    """
+    p = Path(path)
+    if not p.is_file():
+        return []
+    raw = json.loads(p.read_text())
+    return list(raw.get("data", {}).get("devices", []))
+
+
 __all__ = [
     "ENTITY_REGISTRY_MINOR_VERSION_MAX",
     "ENTITY_REGISTRY_MINOR_VERSION_MIN",
     "UnsupportedRegistryVersionError",
     "filter_homekit_switchbee",
     "load_area_registry",
+    "load_device_registry",
     "load_entity_registry",
 ]
