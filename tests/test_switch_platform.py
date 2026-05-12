@@ -47,9 +47,7 @@ class _StubCoordinator:
         self.cu_mac = cu_mac
         self.client = client or _StubClient()
         self.devices = devices
-        self.data: dict[int, Any] = {
-            item_id: dev.state for item_id, dev in devices.items()
-        }
+        self.data: dict[int, Any] = {item_id: dev.state for item_id, dev in devices.items()}
         self.last_update_success = True
 
     def signal_for(self, item_id: int) -> str:
@@ -61,8 +59,12 @@ class _StubCoordinator:
 
 def _switch_device(item_id: int, type_: str = "SWITCH") -> SwitchBeeDevice:
     return SwitchBeeDevice(
-        id=item_id, name=f"Switch {item_id}", hw="hw", type=type_,
-        zone="Zone", state="OFF",
+        id=item_id,
+        name=f"Switch {item_id}",
+        hw="hw",
+        type=type_,
+        zone="Zone",
+        state="OFF",
     )
 
 
@@ -88,9 +90,7 @@ def test_async_setup_entry_filters_only_switch_family_types() -> None:
     class _FakeHassData(dict):
         pass
 
-    fake_hass = type(
-        "FakeHass", (), {"data": {DOMAIN: {"test_entry": coordinator}}}
-    )()
+    fake_hass = type("FakeHass", (), {"data": {DOMAIN: {"test_entry": coordinator}}})()
 
     def _add(entities, update_before_add=False) -> None:
         collected.extend(entities)
@@ -130,7 +130,9 @@ async def test_switch_turn_off_calls_operate_with_off(
     [("ON", True), ("OFF", False), ("OFFLINE", False)],
 )
 async def test_switch_is_on_reflects_cached_state(
-    hass: HomeAssistant, state: str, expected: bool,
+    hass: HomeAssistant,
+    state: str,
+    expected: bool,
 ) -> None:
     dev = _switch_device(3)
     coord = _StubCoordinator(devices={3: dev})
@@ -160,9 +162,7 @@ async def test_switch_subscribes_dispatcher_signal_on_add(
     from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
     received: list[str] = []
-    sibling_unsub = async_dispatcher_connect(
-        hass, signal, lambda v: received.append(v)
-    )
+    sibling_unsub = async_dispatcher_connect(hass, signal, lambda v: received.append(v))
 
     await ent.async_added_to_hass()
 

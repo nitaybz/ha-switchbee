@@ -82,21 +82,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         session=session,
     )
     try:
-        coordinator = await async_build_coordinator(
-            hass, entry, client
-        )
+        coordinator = await async_build_coordinator(hass, entry, client)
     except CUMACMissingError as err:
-        raise ConfigEntryNotReady(
-            f"SwitchBee CU did not return a usable MAC: {err}"
-        ) from err
+        raise ConfigEntryNotReady(f"SwitchBee CU did not return a usable MAC: {err}") from err
     except SwitchBeeProtocolError as err:
-        raise ConfigEntryNotReady(
-            f"SwitchBee LOGIN/GET_CONFIGURATION failed: {err}"
-        ) from err
+        raise ConfigEntryNotReady(f"SwitchBee LOGIN/GET_CONFIGURATION failed: {err}") from err
     except (OSError, TimeoutError) as err:
-        raise ConfigEntryNotReady(
-            f"SwitchBee CU unreachable: {err}"
-        ) from err
+        raise ConfigEntryNotReady(f"SwitchBee CU unreachable: {err}") from err
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
@@ -128,9 +120,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
     unload_ok: Any = True
     if PLATFORMS:
-        unload_ok = await hass.config_entries.async_unload_platforms(
-            entry, PLATFORMS
-        )
+        unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if coordinator is not None:
         await coordinator.async_shutdown()
     return bool(unload_ok)

@@ -53,13 +53,9 @@ class LoginTimeoutWatchdog:
 
     def __init__(self, *, threshold: int, window_seconds: float) -> None:
         if threshold < 1:
-            raise ValueError(
-                f"threshold must be >= 1, got {threshold!r}"
-            )
+            raise ValueError(f"threshold must be >= 1, got {threshold!r}")
         if window_seconds <= 0:
-            raise ValueError(
-                f"window_seconds must be > 0, got {window_seconds!r}"
-            )
+            raise ValueError(f"window_seconds must be > 0, got {window_seconds!r}")
         self._threshold = threshold
         self._window = window_seconds
         self._events: deque[float] = deque()
@@ -122,9 +118,7 @@ class SwitchBeeCoordinator:
         self.client = client
         self.cu_mac = cu_mac
         self.devices = devices
-        self.data: dict[int, Any] = {
-            item_id: device.state for item_id, device in devices.items()
-        }
+        self.data: dict[int, Any] = {item_id: device.state for item_id, device in devices.items()}
         self.watchdog = LoginTimeoutWatchdog(
             threshold=LOGIN_TIMEOUT_THRESHOLD,
             window_seconds=LOGIN_TIMEOUT_WINDOW_SECONDS,

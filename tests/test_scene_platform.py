@@ -40,9 +40,7 @@ class _StubCoordinator:
         self.cu_mac = cu_mac
         self.client = client or _StubClient()
         self.devices = devices
-        self.data: dict[int, Any] = {
-            i: d.state for i, d in devices.items()
-        }
+        self.data: dict[int, Any] = {i: d.state for i, d in devices.items()}
         self.last_update_success = True
 
     def signal_for(self, item_id: int) -> str:
@@ -54,8 +52,12 @@ class _StubCoordinator:
 
 def _scene_device(item_id: int, type_: str = "SCENARIO") -> SwitchBeeDevice:
     return SwitchBeeDevice(
-        id=item_id, name=f"Scene {item_id}", hw="hw", type=type_,
-        zone="Zone", state="OFF",
+        id=item_id,
+        name=f"Scene {item_id}",
+        hw="hw",
+        type=type_,
+        zone="Zone",
+        state="OFF",
     )
 
 
@@ -65,8 +67,7 @@ def test_async_setup_entry_filters_scenario_and_rolling_scenario() -> None:
         1: _scene_device(1, "SCENARIO"),
         2: _scene_device(2, "ROLLING_SCENARIO"),
         # Filtered out:
-        3: SwitchBeeDevice(id=3, name="S", hw="h", type="SWITCH",
-                           zone="Z", state="OFF"),
+        3: SwitchBeeDevice(id=3, name="S", hw="h", type="SWITCH", zone="Z", state="OFF"),
     }
     coordinator = _StubCoordinator(devices=devices)
     collected: list[SwitchBeeScene] = []
@@ -74,9 +75,7 @@ def test_async_setup_entry_filters_scenario_and_rolling_scenario() -> None:
     class _FakeEntry:
         entry_id = "test_entry"
 
-    fake_hass = type(
-        "FakeHass", (), {"data": {DOMAIN: {"test_entry": coordinator}}}
-    )()
+    fake_hass = type("FakeHass", (), {"data": {DOMAIN: {"test_entry": coordinator}}})()
 
     def _add(entities, update_before_add=False) -> None:
         collected.extend(entities)

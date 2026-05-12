@@ -107,11 +107,7 @@ class SwitchBeeEntity(CoordinatorEntity["SwitchBeeCoordinator"]):
         """Subscribe to the per-item dispatcher signal."""
         await super().async_added_to_hass()
         signal = self.coordinator.signal_for(self._device.id)
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass, signal, self._handle_push_value
-            )
-        )
+        self.async_on_remove(async_dispatcher_connect(self.hass, signal, self._handle_push_value))
 
     def _handle_push_value(self, value: object) -> None:
         """Receive a push value from the dispatcher and refresh state.

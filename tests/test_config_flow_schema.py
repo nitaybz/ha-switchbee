@@ -37,33 +37,23 @@ class TestUserDataSchema:
 
     def test_rejects_missing_username(self) -> None:
         with pytest.raises(vol.Invalid):
-            USER_DATA_SCHEMA(
-                {"host": "192.168.68.57", "password": "secret"}
-            )
+            USER_DATA_SCHEMA({"host": "192.168.68.57", "password": "secret"})
 
     def test_rejects_missing_password(self) -> None:
         with pytest.raises(vol.Invalid):
-            USER_DATA_SCHEMA(
-                {"host": "192.168.68.57", "username": "user"}
-            )
+            USER_DATA_SCHEMA({"host": "192.168.68.57", "username": "user"})
 
     def test_rejects_empty_host(self) -> None:
         with pytest.raises(vol.Invalid):
-            USER_DATA_SCHEMA(
-                {"host": "", "username": "user", "password": "secret"}
-            )
+            USER_DATA_SCHEMA({"host": "", "username": "user", "password": "secret"})
 
     def test_rejects_empty_username(self) -> None:
         with pytest.raises(vol.Invalid):
-            USER_DATA_SCHEMA(
-                {"host": "192.168.68.57", "username": "", "password": "secret"}
-            )
+            USER_DATA_SCHEMA({"host": "192.168.68.57", "username": "", "password": "secret"})
 
     def test_rejects_empty_password(self) -> None:
         with pytest.raises(vol.Invalid):
-            USER_DATA_SCHEMA(
-                {"host": "192.168.68.57", "username": "user", "password": ""}
-            )
+            USER_DATA_SCHEMA({"host": "192.168.68.57", "username": "user", "password": ""})
 
 
 class TestOptionsSchema:

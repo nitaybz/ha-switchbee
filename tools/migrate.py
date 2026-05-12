@@ -98,47 +98,62 @@ def build_parser() -> argparse.ArgumentParser:
         description="Migrate homebridge-switchbee entity rows onto ha-switchbee.",
     )
     parser.add_argument(
-        "--ha-storage", required=True, type=Path,
+        "--ha-storage",
+        required=True,
+        type=Path,
         help="path to HA .storage/ directory",
     )
     parser.add_argument(
-        "--homebridge-persist-dir", required=True, type=Path,
+        "--homebridge-persist-dir",
+        required=True,
+        type=Path,
         help="path to homebridge node-persist dir with the SwitchBee plugin cache",
     )
     parser.add_argument(
-        "--homebridge-config", required=True, type=Path,
+        "--homebridge-config",
+        required=True,
+        type=Path,
         help="path to /var/lib/homebridge/config.json (snapshotted into backup)",
     )
     parser.add_argument(
-        "--cu-host", required=True,
+        "--cu-host",
+        required=True,
         help="SwitchBee Central Unit host or IP",
     )
     parser.add_argument(
-        "--cu-user", required=True,
+        "--cu-user",
+        required=True,
         help="SwitchBee CU username",
     )
     parser.add_argument(
-        "--cu-pass", required=True,
+        "--cu-pass",
+        required=True,
         help="SwitchBee CU password (prefer $SB_PASS env var)",
     )
     parser.add_argument(
-        "--cu-mac", default=None,
+        "--cu-mac",
+        default=None,
         help="lowercase 12-hex CU MAC; when omitted the CLI probes the live CU",
     )
     parser.add_argument(
-        "--bridge-mac", required=True,
+        "--bridge-mac",
+        required=True,
         help="homekit_controller bridge MAC prefix on existing unique_ids",
     )
     parser.add_argument(
-        "--bridge-config-entry-id", default=None,
+        "--bridge-config-entry-id",
+        default=None,
         help="SwitchBee bridge config_entry_id (required for --apply)",
     )
     parser.add_argument(
-        "--output-dir", required=True, type=Path,
+        "--output-dir",
+        required=True,
+        type=Path,
         help="dir for backup.tar.gz + reports (must NOT be under /tmp for --apply)",
     )
     parser.add_argument(
-        "--ha-stopped-check", default="docker-compose",
+        "--ha-stopped-check",
+        default="docker-compose",
         help=(
             "how to verify HA is stopped before --apply: "
             "'docker-compose' (probe /home/ginnie/ginnie-home), "
@@ -147,11 +162,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
-        "--dry-run", action="store_true", default=True,
+        "--dry-run",
+        action="store_true",
+        default=True,
         help="produce backup + report only; default",
     )
     mode.add_argument(
-        "--apply", action="store_true",
+        "--apply",
+        action="store_true",
         help="rewrite entity_registry + device_registry in place",
     )
     return parser
@@ -168,9 +186,14 @@ def _probe_ha_running(mode: str) -> bool:
     try:
         result = subprocess.run(
             [
-                "docker", "compose",
-                "-f", "/home/ginnie/ginnie-home/docker-compose.yml",
-                "ps", "ginnie-home", "--format", "json",
+                "docker",
+                "compose",
+                "-f",
+                "/home/ginnie/ginnie-home/docker-compose.yml",
+                "ps",
+                "ginnie-home",
+                "--format",
+                "json",
             ],
             capture_output=True,
             text=True,
@@ -294,9 +317,7 @@ def main(argv: list[str] | None = None) -> int:
         rewrites=[r for r in rows if r.action == "migrate" and r.confidence in {"high", "medium"}],
         deletes=[r for r in rows if r.action == "delete"],
     )
-    summary_entity = apply_entity_registry(
-        args.ha_storage / "core.entity_registry", update
-    )
+    summary_entity = apply_entity_registry(args.ha_storage / "core.entity_registry", update)
     summary_device = clean_orphan_devices(
         args.ha_storage / "core.device_registry",
         bridge_config_entry_id=args.bridge_config_entry_id,
@@ -314,9 +335,7 @@ def main(argv: list[str] | None = None) -> int:
         },
         "backup_path": str(backup),
     }
-    (args.output_dir / "apply-result.json").write_text(
-        json.dumps(apply_result, indent=2)
-    )
+    (args.output_dir / "apply-result.json").write_text(json.dumps(apply_result, indent=2))
     _LOGGER.info(
         "--apply complete: entity migrated=%d deleted=%d, device deleted=%d",
         summary_entity.migrated,

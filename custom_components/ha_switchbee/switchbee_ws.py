@@ -335,9 +335,7 @@ class SwitchBeeWSClient:
         self._reader_task = asyncio.create_task(self._reader_loop(ws))
 
         try:
-            login_data = await asyncio.wait_for(
-                self._login_raw(), timeout=self._login_timeout
-            )
+            login_data = await asyncio.wait_for(self._login_raw(), timeout=self._login_timeout)
         except TimeoutError as err:
             _LOGGER.warning(
                 "LOGIN timed out after %.1fs; closing WS and reconnecting",
@@ -364,9 +362,7 @@ class SwitchBeeWSClient:
     async def _teardown_connection(self, *, reason: str) -> None:
         """Reject all pending futures, cancel reader, close WS."""
         if self._pending:
-            _LOGGER.debug(
-                "Rejecting %d pending command(s) due to: %s", len(self._pending), reason
-            )
+            _LOGGER.debug("Rejecting %d pending command(s) due to: %s", len(self._pending), reason)
             for command_id in list(self._pending.keys()):
                 fut = self._pending.pop(command_id, None)
                 if fut is not None and not fut.done():
@@ -472,9 +468,7 @@ class SwitchBeeWSClient:
             async with self._login_lock:
                 self._token = None
                 self._token_expiration_ms = None
-                login_data = await asyncio.wait_for(
-                    self._login_raw(), timeout=self._login_timeout
-                )
+                login_data = await asyncio.wait_for(self._login_raw(), timeout=self._login_timeout)
                 self._token = login_data.get("token")
                 self._token_expiration_ms = login_data.get("expiration")
             reply = await self._send_and_wait(command, params, include_token=True)

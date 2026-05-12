@@ -102,11 +102,7 @@ async def test_get_configuration_returns_mac_and_zones(
             # Normalize the mac the same way the integration will.
             assert normalize_cu_mac(data["mac"]) == "a82108e7688f"
             assert isinstance(data["zones"], list)
-            assert any(
-                item["id"] == 3
-                for zone in data["zones"]
-                for item in zone.get("items", [])
-            )
+            assert any(item["id"] == 3 for zone in data["zones"] for item in zone.get("items", []))
         finally:
             await client.stop()
 
@@ -144,9 +140,7 @@ async def test_push_delivery_accepts_both_shapes(
             await cu.push_configuration_change(
                 item_id=3, name="Pictures", value="ON", shape="newValue"
             )
-            await cu.push_configuration_change(
-                item_id=7, name="Ceiling", value=42, shape="data"
-            )
+            await cu.push_configuration_change(item_id=7, name="Ceiling", value=42, shape="data")
             # Allow the reader task to drain.
             for _ in range(40):
                 await asyncio.sleep(0.01)
@@ -173,9 +167,7 @@ async def test_unknown_id_push_is_flagged_unknown(
         try:
             await client.get_configuration()
             client.add_listener(lambda evt: received.append(evt))
-            await cu.push_configuration_change(
-                item_id=9999, name="Ghost", value="ON"
-            )
+            await cu.push_configuration_change(item_id=9999, name="Ghost", value="ON")
             for _ in range(40):
                 await asyncio.sleep(0.01)
                 if received:
@@ -199,9 +191,7 @@ async def test_concurrent_commands_resolve_correctly(
         client = await _make_client(cu, http_session)
         await client.start()
         try:
-            results = await asyncio.gather(
-                *(client.get_configuration() for _ in range(10))
-            )
+            results = await asyncio.gather(*(client.get_configuration() for _ in range(10)))
             assert len(results) == 10
             for data in results:
                 assert data["mac"] == SAMPLE_MAC

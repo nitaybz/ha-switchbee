@@ -44,9 +44,7 @@ def load_switchbee_configuration(persist_dir: Path) -> Mapping[int, Mapping[str,
     """
     persist = Path(persist_dir)
     if not persist.is_dir():
-        raise HomebridgePersistNotFoundError(
-            f"persist directory not found: {persist_dir}"
-        )
+        raise HomebridgePersistNotFoundError(f"persist directory not found: {persist_dir}")
     for entry in persist.iterdir():
         if not entry.is_file():
             continue

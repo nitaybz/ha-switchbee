@@ -36,9 +36,7 @@ class _StubCoordinator:
         self.cu_mac = cu_mac
         self.client = client or _StubClient()
         self.devices = devices
-        self.data: dict[int, Any] = {
-            i: d.state for i, d in devices.items()
-        }
+        self.data: dict[int, Any] = {i: d.state for i, d in devices.items()}
         self.last_update_success = True
 
     def signal_for(self, item_id: int) -> str:
@@ -50,8 +48,12 @@ class _StubCoordinator:
 
 def _light_device(item_id: int, state: int = 0) -> SwitchBeeDevice:
     return SwitchBeeDevice(
-        id=item_id, name=f"Dimmer {item_id}", hw="hw", type="DIMMER",
-        zone="Zone", state=state,
+        id=item_id,
+        name=f"Dimmer {item_id}",
+        hw="hw",
+        type="DIMMER",
+        zone="Zone",
+        state=state,
     )
 
 
@@ -59,10 +61,8 @@ def test_async_setup_entry_filters_only_dimmer() -> None:
     """Only DIMMER items become light entities."""
     devices = {
         1: _light_device(1, 0),
-        2: SwitchBeeDevice(id=2, name="Switch", hw="hw", type="SWITCH",
-                           zone="Zone", state="OFF"),
-        3: SwitchBeeDevice(id=3, name="Shutter", hw="hw", type="SHUTTER",
-                           zone="Zone", state=0),
+        2: SwitchBeeDevice(id=2, name="Switch", hw="hw", type="SWITCH", zone="Zone", state="OFF"),
+        3: SwitchBeeDevice(id=3, name="Shutter", hw="hw", type="SHUTTER", zone="Zone", state=0),
     }
     coordinator = _StubCoordinator(devices=devices)
     collected: list[SwitchBeeLight] = []
@@ -70,9 +70,7 @@ def test_async_setup_entry_filters_only_dimmer() -> None:
     class _FakeEntry:
         entry_id = "test_entry"
 
-    fake_hass = type(
-        "FakeHass", (), {"data": {DOMAIN: {"test_entry": coordinator}}}
-    )()
+    fake_hass = type("FakeHass", (), {"data": {DOMAIN: {"test_entry": coordinator}}})()
 
     def _add(entities, update_before_add=False) -> None:
         collected.extend(entities)
@@ -93,7 +91,9 @@ def test_async_setup_entry_filters_only_dimmer() -> None:
     ],
 )
 async def test_light_turn_on_scales_ha_brightness_to_cu_percent(
-    hass: HomeAssistant, ha_brightness: int, cu_percent: int,
+    hass: HomeAssistant,
+    ha_brightness: int,
+    cu_percent: int,
 ) -> None:
     """HA brightness (0-255) maps to CU percent (0-100)."""
     dev = _light_device(7, state=0)
@@ -133,7 +133,10 @@ async def test_light_turn_off_sends_zero(hass: HomeAssistant) -> None:
     ],
 )
 async def test_light_state_maps_to_is_on_and_brightness(
-    hass: HomeAssistant, cu_state: int, expected_is_on: bool, expected_brightness: int,
+    hass: HomeAssistant,
+    cu_state: int,
+    expected_is_on: bool,
+    expected_brightness: int,
 ) -> None:
     """CU percent (0-100) maps to is_on + HA brightness (0-255)."""
     dev = _light_device(7, state=cu_state)

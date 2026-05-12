@@ -113,7 +113,7 @@ def _parse_homekit_unique_id(unique_id: str, bridge_mac: str) -> tuple[int, ...]
     prefix = f"{bridge_mac}_"
     if not unique_id.startswith(prefix):
         return None
-    tail = unique_id[len(prefix):]
+    tail = unique_id[len(prefix) :]
     parts = tail.split("_")
     if not (2 <= len(parts) <= 3):
         return None

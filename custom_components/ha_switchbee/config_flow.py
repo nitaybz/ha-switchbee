@@ -90,9 +90,7 @@ class InvalidAuthError(Exception):
     """Validation error: the CU rejected the credentials."""
 
 
-async def _validate_user_input(
-    hass: HomeAssistant, data: dict[str, Any]
-) -> str:
+async def _validate_user_input(hass: HomeAssistant, data: dict[str, Any]) -> str:
     """Run a short-lived LOGIN against the CU and return its MAC.
 
     Raises:
@@ -137,9 +135,7 @@ class SwitchBeeConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Initial step: collect host, username, password."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -195,20 +191,14 @@ class SwitchBeeOptionsFlow(OptionsFlow):
         # convention so the integration loads on the current PHCC pin.
         self._entry = config_entry
 
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        current = self._entry.options.get(
-            CONF_CONNECTION_TIMEOUT, DEFAULT_CONNECTION_TIMEOUT
-        )
+        current = self._entry.options.get(CONF_CONNECTION_TIMEOUT, DEFAULT_CONNECTION_TIMEOUT)
         schema = vol.Schema(
             {
-                vol.Optional(
-                    CONF_CONNECTION_TIMEOUT, default=current
-                ): _positive_int,
+                vol.Optional(CONF_CONNECTION_TIMEOUT, default=current): _positive_int,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)

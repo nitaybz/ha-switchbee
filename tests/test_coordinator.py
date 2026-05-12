@@ -67,7 +67,9 @@ async def test_async_build_coordinator_sets_cu_mac_and_devices(
         # The real `_validate_user_input` would normally do this; we call
         # the coordinator builder directly so the test is hermetic.
         coordinator = await async_build_coordinator(
-            hass, entry=None, client=client  # type: ignore[arg-type]
+            hass,
+            entry=None,
+            client=client,  # type: ignore[arg-type]
         )
         try:
             assert isinstance(coordinator, SwitchBeeCoordinator)
@@ -92,7 +94,9 @@ async def test_coordinator_dispatches_push_event_to_signal(
     async with FakeCU() as cu, aiohttp.ClientSession() as session:
         client = await _make_client(cu, session)
         coordinator = await async_build_coordinator(
-            hass, entry=None, client=client  # type: ignore[arg-type]
+            hass,
+            entry=None,
+            client=client,  # type: ignore[arg-type]
         )
 
         try:
@@ -116,9 +120,7 @@ async def test_coordinator_dispatches_push_event_to_signal(
                 await hass.async_block_till_done()
 
             unsub()
-            assert received == ["ON"], (
-                f"expected one push value 'ON', got {received!r}"
-            )
+            assert received == ["ON"], f"expected one push value 'ON', got {received!r}"
             # The coordinator's `data` cache should also reflect the update.
             assert coordinator.data[3] == "ON"
         finally:
@@ -132,7 +134,9 @@ async def test_coordinator_handles_push_with_data_shape(
     async with FakeCU() as cu, aiohttp.ClientSession() as session:
         client = await _make_client(cu, session)
         coordinator = await async_build_coordinator(
-            hass, entry=None, client=client  # type: ignore[arg-type]
+            hass,
+            entry=None,
+            client=client,  # type: ignore[arg-type]
         )
 
         try:
@@ -141,9 +145,7 @@ async def test_coordinator_handles_push_with_data_shape(
                 hass, coordinator.signal_for(7), lambda v: received.append(v)
             )
 
-            await cu.push_configuration_change(
-                item_id=7, name="Ceiling", value=42, shape="data"
-            )
+            await cu.push_configuration_change(item_id=7, name="Ceiling", value=42, shape="data")
 
             deadline = asyncio.get_running_loop().time() + 1.0
             while not received and asyncio.get_running_loop().time() < deadline:
@@ -164,7 +166,9 @@ async def test_devices_by_platform_groups_correctly(
     async with FakeCU() as cu, aiohttp.ClientSession() as session:
         client = await _make_client(cu, session)
         coordinator = await async_build_coordinator(
-            hass, entry=None, client=client  # type: ignore[arg-type]
+            hass,
+            entry=None,
+            client=client,  # type: ignore[arg-type]
         )
         try:
             grouped = coordinator.devices_by_platform()
@@ -185,7 +189,9 @@ async def test_async_shutdown_unsubscribes_and_stops_client(
     async with FakeCU() as cu, aiohttp.ClientSession() as session:
         client = await _make_client(cu, session)
         coordinator = await async_build_coordinator(
-            hass, entry=None, client=client  # type: ignore[arg-type]
+            hass,
+            entry=None,
+            client=client,  # type: ignore[arg-type]
         )
         await coordinator.async_shutdown()
 
@@ -195,6 +201,4 @@ async def test_async_shutdown_unsubscribes_and_stops_client(
         # is listening; the fake CU just sees no active connections to
         # broadcast to.
         with contextlib.suppress(Exception):
-            await cu.push_configuration_change(
-                item_id=3, name="Pictures", value="OFF"
-            )
+            await cu.push_configuration_change(item_id=3, name="Pictures", value="OFF")

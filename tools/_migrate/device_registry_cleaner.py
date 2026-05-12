@@ -74,9 +74,7 @@ def clean_orphan_devices(
         os.fsync(fh.fileno())
     os.replace(tmp, registry_path)
 
-    _LOGGER.info(
-        "device_registry cleaned: deleted=%d untouched=%d", deleted, untouched
-    )
+    _LOGGER.info("device_registry cleaned: deleted=%d untouched=%d", deleted, untouched)
     return DeviceRegistryCleanSummary(deleted=deleted, untouched=untouched)
 
 

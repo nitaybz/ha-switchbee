@@ -63,9 +63,7 @@ def create_backup(
                 f"Required HA registry file missing: {name} (looked in {ha_storage})"
             )
     if not homebridge_config_path.is_file():
-        raise BackupInputError(
-            f"homebridge config.json missing: {homebridge_config_path}"
-        )
+        raise BackupInputError(f"homebridge config.json missing: {homebridge_config_path}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
     final = output_dir / "backup.tar.gz"

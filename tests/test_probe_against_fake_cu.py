@@ -69,11 +69,16 @@ async def test_probe_runs_end_to_end_against_fake_cu_with_duration_zero() -> Non
         proc = await asyncio.get_running_loop().run_in_executor(
             None,
             lambda: _run_probe_subprocess(
-                "--host", "127.0.0.1",
-                "--port", str(port),
-                "--username", "user",
-                "--password", "pass",
-                "--duration", "0",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(port),
+                "--username",
+                "user",
+                "--password",
+                "pass",
+                "--duration",
+                "0",
                 "--read-only",
                 "--no-banner",
             ),
@@ -95,9 +100,7 @@ async def test_probe_runs_end_to_end_against_fake_cu_with_duration_zero() -> Non
         for item in zone["items"]:
             type_counter[item["type"]] = type_counter.get(item["type"], 0) + 1
     for type_name, count in type_counter.items():
-        assert f"{type_name}={count}" in stdout, (
-            f"missing {type_name}={count} in stdout:\n{stdout}"
-        )
+        assert f"{type_name}={count}" in stdout, f"missing {type_name}={count} in stdout:\n{stdout}"
 
     # Summary line.
     assert "Probe complete" in stdout
@@ -124,11 +127,16 @@ async def test_probe_observes_push_events_during_window() -> None:
         probe_future = loop.run_in_executor(
             None,
             lambda: _run_probe_subprocess(
-                "--host", "127.0.0.1",
-                "--port", str(port),
-                "--username", "user",
-                "--password", "pass",
-                "--duration", "2",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(port),
+                "--username",
+                "user",
+                "--password",
+                "pass",
+                "--duration",
+                "2",
                 "--read-only",
                 "--no-banner",
                 timeout=20.0,

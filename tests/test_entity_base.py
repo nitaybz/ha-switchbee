@@ -51,9 +51,7 @@ class _StubCoordinator:
         self.cu_mac = cu_mac
         self.client = client or _StubClient()
         self.devices = devices or {}
-        self.data: dict[int, object] = {
-            item_id: dev.state for item_id, dev in self.devices.items()
-        }
+        self.data: dict[int, object] = {item_id: dev.state for item_id, dev in self.devices.items()}
         # Track last_update_success the way DataUpdateCoordinator does so
         # the CoordinatorEntity.available super().available check has a
         # truthy value.
@@ -119,9 +117,7 @@ def test_device_info_has_per_item_identifier_and_via_device() -> None:
 def test_available_false_when_ws_disconnected() -> None:
     """available is False if the coordinator's client is not connected."""
     dev = _make_device(3, state="OFF")
-    coordinator = _StubCoordinator(
-        devices={3: dev}, client=_StubClient(connected=False)
-    )
+    coordinator = _StubCoordinator(devices={3: dev}, client=_StubClient(connected=False))
     entity = SwitchBeeEntity(coordinator, dev)
     assert entity.available is False
 

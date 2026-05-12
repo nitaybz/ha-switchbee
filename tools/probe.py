@@ -217,11 +217,7 @@ def _print_summary(summary: dict) -> None:
 
 def _format_push(event: PushEvent) -> str:
     """Render a single push notification as one stable greppable line."""
-    return (
-        f"[push] item_id={event.id} "
-        f"name={event.name!r} "
-        f"new_value={event.value!r}"
-    )
+    return f"[push] item_id={event.id} name={event.name!r} new_value={event.value!r}"
 
 
 def _maybe_print_banner(no_banner: bool) -> None:

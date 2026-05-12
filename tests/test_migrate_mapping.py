@@ -267,9 +267,7 @@ def test_mapping_row_is_dataclass_with_named_fields() -> None:
 # revised after live verification on the STE Smart Home CU) -----
 
 
-def _device(
-    *, device_id: str, serial_number: str | None
-) -> dict[str, object]:
+def _device(*, device_id: str, serial_number: str | None) -> dict[str, object]:
     """Build a minimal HA device_registry row for SN-based mapping tests."""
     return {
         "id": device_id,

@@ -47,9 +47,7 @@ def load_entity_registry(path: Path) -> dict[str, Any]:
     version = raw.get("version")
     minor = raw.get("minor_version")
     if version != 1:
-        raise UnsupportedRegistryVersionError(
-            f"entity_registry version must be 1, got {version!r}"
-        )
+        raise UnsupportedRegistryVersionError(f"entity_registry version must be 1, got {version!r}")
     if not isinstance(minor, int) or not (
         ENTITY_REGISTRY_MINOR_VERSION_MIN <= minor <= ENTITY_REGISTRY_MINOR_VERSION_MAX
     ):

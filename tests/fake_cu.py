@@ -185,9 +185,7 @@ class FakeCU:
         finally:
             self._connections.discard(websocket)
 
-    async def _handle_frame(
-        self, ws: WebSocketServerProtocol, frame: dict
-    ) -> None:
+    async def _handle_frame(self, ws: WebSocketServerProtocol, frame: dict) -> None:
         command = frame.get("command")
         command_id = frame.get("commandId")
         params = frame.get("params")
@@ -232,9 +230,7 @@ class FakeCU:
             or params.get("username") != self.username
             or params.get("password") != self.password
         ):
-            await self._send_status(
-                ws, command_id, status="INVALID_CREDENTIALS"
-            )
+            await self._send_status(ws, command_id, status="INVALID_CREDENTIALS")
             return
         # Expiration is ms-since-epoch, ~10 minutes in the future.
         expiration_ms = int((time.time() + 600) * 1000)
@@ -279,17 +275,11 @@ class FakeCU:
         command_id: int,
         params: Any,
     ) -> None:
-        if (
-            self.mode == "invalid_token"
-            and not self._invalid_token_consumed
-        ):
+        if self.mode == "invalid_token" and not self._invalid_token_consumed:
             self._invalid_token_consumed = True
             await self._send_status(ws, command_id, status="INVALID_TOKEN")
             return
-        if (
-            self.mode == "drop_connection_mid"
-            and not self._drop_connection_consumed
-        ):
+        if self.mode == "drop_connection_mid" and not self._drop_connection_consumed:
             self._drop_connection_consumed = True
             await ws.close()
             return
@@ -323,9 +313,7 @@ class FakeCU:
         *,
         status: str,
     ) -> None:
-        await ws.send(
-            json.dumps({"commandId": command_id, "status": status})
-        )
+        await ws.send(json.dumps({"commandId": command_id, "status": status}))
 
 
 __all__ = ["FakeCU", "FAKE_TOKEN", "SAMPLE_MAC", "SAMPLE_ZONES"]

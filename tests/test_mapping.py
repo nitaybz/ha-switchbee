@@ -66,9 +66,7 @@ class TestV1Mappings:
 class TestDeferredV1_1Types:
     """v1.1 deferred types return None and appear in DEFERRED_TYPES."""
 
-    @pytest.mark.parametrize(
-        "sb_type", ["THERMOSTAT", "VRF_AC", "IR_DEVICE", "SENSOR", "TWO_WAY"]
-    )
+    @pytest.mark.parametrize("sb_type", ["THERMOSTAT", "VRF_AC", "IR_DEVICE", "SENSOR", "TWO_WAY"])
     def test_deferred_returns_none(self, sb_type):
         assert map_type_to_platform(sb_type) is None
 

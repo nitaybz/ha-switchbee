@@ -65,9 +65,7 @@ def test_orphan_device_rows_deleted(tmp_path: Path) -> None:
     registry_path = storage / "core.device_registry"
     _seed_device_registry(registry_path)
 
-    summary = clean_orphan_devices(
-        registry_path, bridge_config_entry_id=BRIDGE_CONFIG_ENTRY_ID
-    )
+    summary = clean_orphan_devices(registry_path, bridge_config_entry_id=BRIDGE_CONFIG_ENTRY_ID)
 
     dr = json.loads(registry_path.read_text())
     ids = {d["id"] for d in dr["data"]["devices"]}
@@ -83,9 +81,7 @@ def test_multi_integration_device_not_deleted(tmp_path: Path) -> None:
     registry_path = storage / "core.device_registry"
     _seed_device_registry(registry_path)
 
-    clean_orphan_devices(
-        registry_path, bridge_config_entry_id=BRIDGE_CONFIG_ENTRY_ID
-    )
+    clean_orphan_devices(registry_path, bridge_config_entry_id=BRIDGE_CONFIG_ENTRY_ID)
 
     dr = json.loads(registry_path.read_text())
     by_id = {d["id"]: d for d in dr["data"]["devices"]}
@@ -105,9 +101,7 @@ def test_unrelated_bridge_device_not_deleted(tmp_path: Path) -> None:
     registry_path = storage / "core.device_registry"
     _seed_device_registry(registry_path)
 
-    clean_orphan_devices(
-        registry_path, bridge_config_entry_id=BRIDGE_CONFIG_ENTRY_ID
-    )
+    clean_orphan_devices(registry_path, bridge_config_entry_id=BRIDGE_CONFIG_ENTRY_ID)
 
     dr = json.loads(registry_path.read_text())
     ids = {d["id"] for d in dr["data"]["devices"]}
@@ -121,9 +115,7 @@ def test_top_level_structure_preserved(tmp_path: Path) -> None:
     registry_path = storage / "core.device_registry"
     _seed_device_registry(registry_path)
 
-    clean_orphan_devices(
-        registry_path, bridge_config_entry_id=BRIDGE_CONFIG_ENTRY_ID
-    )
+    clean_orphan_devices(registry_path, bridge_config_entry_id=BRIDGE_CONFIG_ENTRY_ID)
 
     dr = json.loads(registry_path.read_text())
     assert dr["version"] == 1
@@ -138,9 +130,7 @@ def test_clean_orphan_devices_atomic_rename(tmp_path: Path) -> None:
     registry_path = storage / "core.device_registry"
     _seed_device_registry(registry_path)
 
-    clean_orphan_devices(
-        registry_path, bridge_config_entry_id=BRIDGE_CONFIG_ENTRY_ID
-    )
+    clean_orphan_devices(registry_path, bridge_config_entry_id=BRIDGE_CONFIG_ENTRY_ID)
 
     leftovers = list(storage.glob("core.device_registry.tmp*"))
     assert leftovers == []

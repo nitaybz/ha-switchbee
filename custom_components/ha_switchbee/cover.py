@@ -67,9 +67,7 @@ class SwitchBeeCover(SwitchBeeEntity, CoverEntity):
             )
         else:
             self._attr_supported_features = (
-                CoverEntityFeature.OPEN
-                | CoverEntityFeature.CLOSE
-                | CoverEntityFeature.STOP
+                CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
             )
 
     @property
@@ -102,27 +100,21 @@ class SwitchBeeCover(SwitchBeeEntity, CoverEntity):
         if self._is_percent_type:
             await self.coordinator.client.operate(self._device.id, 100)
         else:
-            await self.coordinator.client.operate(
-                self._device.id, encode_somfy("UP")
-            )
+            await self.coordinator.client.operate(self._device.id, encode_somfy("UP"))
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
         if self._is_percent_type:
             await self.coordinator.client.operate(self._device.id, 0)
         else:
-            await self.coordinator.client.operate(
-                self._device.id, encode_somfy("DOWN")
-            )
+            await self.coordinator.client.operate(self._device.id, encode_somfy("DOWN"))
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover. Same payload for both flavours."""
         if self._is_percent_type:
             await self.coordinator.client.operate(self._device.id, "STOP")
         else:
-            await self.coordinator.client.operate(
-                self._device.id, encode_somfy("STOP")
-            )
+            await self.coordinator.client.operate(self._device.id, encode_somfy("STOP"))
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Set a specific position. Only valid for SHUTTER family."""

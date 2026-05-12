@@ -21,12 +21,33 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
+import os
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from homeassistant.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Redirect pytest's tmp basetemp away from /tmp on CI runners.
+
+    The migrate-tool safety gate refuses --output-dir paths under /tmp
+    (the backup tarball must survive a reboot; tmpfs does not). Pytest's
+    default tmp_path on Linux lives under `/tmp/pytest-of-<user>/`, which
+    trips the gate in tests that use `tmp_path` to stage a fixture HA
+    tree. Locally on macOS this is moot because tmp_path lands under
+    `/var/folders/...` (also not under /tmp). On GH Actions Linux runners
+    we point pytest at `$RUNNER_TEMP` (typically `/home/runner/work/_temp`)
+    which lives on a real filesystem.
+    """
+    runner_temp = os.environ.get("RUNNER_TEMP")
+    if runner_temp and not config.option.basetemp:
+        target = Path(runner_temp) / "pytest"
+        target.mkdir(parents=True, exist_ok=True)
+        config.option.basetemp = str(target)
 
 
 @pytest.fixture(autouse=True)

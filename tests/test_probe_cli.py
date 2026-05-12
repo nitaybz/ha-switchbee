@@ -54,11 +54,14 @@ def test_help_lists_prompt_aliases() -> None:
 
 def test_missing_host_exits_nonzero() -> None:
     result = _run_probe(
-        "--username", "u",
-        "--password", "p",
+        "--username",
+        "u",
+        "--password",
+        "p",
         "--read-only",
         "--no-banner",
-        "--duration", "0",
+        "--duration",
+        "0",
     )
     # argparse exits 2 on missing required arg.
     assert result.returncode != 0
@@ -73,10 +76,14 @@ def test_live_mode_requires_read_only_flag() -> None:
     whenever they target a host. Tests can pass `--read-only` freely.
     """
     result = _run_probe(
-        "--host", "127.0.0.1",
-        "--username", "u",
-        "--password", "p",
-        "--duration", "0",
+        "--host",
+        "127.0.0.1",
+        "--username",
+        "u",
+        "--password",
+        "p",
+        "--duration",
+        "0",
         "--no-banner",
     )
     assert result.returncode != 0, "probe must refuse to run without --read-only"
@@ -102,10 +109,14 @@ def test_observe_seconds_zero_is_accepted_in_parser() -> None:
     parser = module.build_parser()
     namespace = parser.parse_args(
         [
-            "--host", "127.0.0.1",
-            "--username", "u",
-            "--password", "p",
-            "--duration", "0",
+            "--host",
+            "127.0.0.1",
+            "--username",
+            "u",
+            "--password",
+            "p",
+            "--duration",
+            "0",
             "--read-only",
             "--no-banner",
         ]
@@ -128,10 +139,14 @@ def test_aliases_resolve_to_same_namespace_attrs() -> None:
     parser = module.build_parser()
     namespace = parser.parse_args(
         [
-            "--host", "127.0.0.1",
-            "--user", "u",
-            "--pass", "p",
-            "--observe-seconds", "2",
+            "--host",
+            "127.0.0.1",
+            "--user",
+            "u",
+            "--pass",
+            "p",
+            "--observe-seconds",
+            "2",
             "--read-only",
             "--no-banner",
         ]

@@ -75,7 +75,7 @@ def _patched_client_with_one_switch():
     instance.stop = AsyncMock(return_value=None)
     instance.operate = AsyncMock(return_value=None)
     instance.connected = True
-    instance.add_listener = lambda cb: (lambda: None)
+    instance.add_listener = lambda cb: lambda: None
     return instance
 
 
@@ -158,15 +158,13 @@ async def test_async_setup_entry_adopts_orphan_entity_registry_row(
     assert after.platform == DOMAIN
     assert after.unique_id == f"{SAMPLE_MAC_NORMALIZED}_42"
     assert after.config_entry_id == entry.entry_id, (
-        "config_entry_id was not filled on adoption; HA still considers the "
-        "row an orphan."
+        "config_entry_id was not filled on adoption; HA still considers the row an orphan."
     )
     assert after.icon == "mdi:foo"
     assert "alias-a" in (after.aliases or set())
     assert "label-l" in (after.labels or set())
     assert after.area_id == test_area.id, (
-        "area_id was lost during adoption; cutover would strip room "
-        "assignments off every entity."
+        "area_id was lost during adoption; cutover would strip room assignments off every entity."
     )
     # The entity itself no longer carries a name (has_entity_name=True +
     # _attr_name=None pattern); the friendly label moved to the per-item

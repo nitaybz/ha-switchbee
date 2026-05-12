@@ -140,9 +140,7 @@ def restore_entity_areas(
     """
     old_dr = _load_from_tar(backup_tarball, "core.device_registry")
     item_map = _build_item_to_area_map(old_dr)
-    _LOGGER.info(
-        "backup contains %d items with mapping data", len(item_map)
-    )
+    _LOGGER.info("backup contains %d items with mapping data", len(item_map))
 
     er_path = ha_storage / "core.entity_registry"
     er = json.loads(er_path.read_text())
@@ -255,7 +253,7 @@ def restore_device_areas(
                 continue
             if not isinstance(key, str) or not key.startswith(target_prefix):
                 continue
-            tail = key[len(target_prefix):]
+            tail = key[len(target_prefix) :]
             try:
                 item_id = int(tail)
             except ValueError:
@@ -331,9 +329,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.INFO, format="%(levelname)s %(name)s %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
 
     ent = restore_entity_areas(
         backup_tarball=args.backup,

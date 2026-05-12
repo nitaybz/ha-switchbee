@@ -56,9 +56,7 @@ class _PatchedClient:
             instance.start = AsyncMock(return_value=None)
             instance.get_configuration = AsyncMock(
                 return_value=(
-                    {"mac": SAMPLE_MAC_RAW, "zones": []}
-                    if self._has_mac
-                    else {"zones": []}
+                    {"mac": SAMPLE_MAC_RAW, "zones": []} if self._has_mac else {"zones": []}
                 )
             )
         else:
@@ -67,9 +65,7 @@ class _PatchedClient:
             )
 
             instance.start = AsyncMock(
-                side_effect=SwitchBeeProtocolError(
-                    "CU rejected 'LOGIN': INVALID_CREDENTIALS"
-                )
+                side_effect=SwitchBeeProtocolError("CU rejected 'LOGIN': INVALID_CREDENTIALS")
             )
             instance.get_configuration = AsyncMock(
                 return_value={"mac": SAMPLE_MAC_RAW, "zones": []}
@@ -78,7 +74,7 @@ class _PatchedClient:
         # `connected` is read by the coordinator's shutdown path.
         instance.connected = False
         # `add_listener` returns an unsubscribe callable.
-        instance.add_listener = lambda cb: (lambda: None)
+        instance.add_listener = lambda cb: lambda: None
         return instance
 
     def __enter__(self):
@@ -103,9 +99,7 @@ def _patched_client(*, login_ok: bool = True, has_mac: bool = True) -> _PatchedC
 
 async def test_user_step_shows_form(hass: HomeAssistant) -> None:
     """Submitting no input shows the user form."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": SOURCE_USER}
-    )
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] in (None, {})
@@ -114,9 +108,7 @@ async def test_user_step_shows_form(hass: HomeAssistant) -> None:
 async def test_user_step_creates_entry_on_success(hass: HomeAssistant) -> None:
     """Valid creds -> entry created with normalized cu_mac as unique_id."""
     with _patched_client():
-        result = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": SOURCE_USER}
-        )
+        result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
         assert result["type"] == FlowResultType.FORM
 
         result = await hass.config_entries.flow.async_configure(
@@ -141,9 +133,7 @@ async def test_user_step_creates_entry_on_success(hass: HomeAssistant) -> None:
 async def test_user_step_rejects_duplicate(hass: HomeAssistant) -> None:
     """A second add of the same CU MAC aborts with already_configured."""
     with _patched_client():
-        first = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": SOURCE_USER}
-        )
+        first = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
         first = await hass.config_entries.flow.async_configure(
             first["flow_id"],
             {
@@ -156,9 +146,7 @@ async def test_user_step_rejects_duplicate(hass: HomeAssistant) -> None:
         assert first["type"] == FlowResultType.CREATE_ENTRY
 
         # Same CU, second add.
-        second = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": SOURCE_USER}
-        )
+        second = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
         second = await hass.config_entries.flow.async_configure(
             second["flow_id"],
             {
@@ -176,9 +164,7 @@ async def test_user_step_rejects_duplicate(hass: HomeAssistant) -> None:
 async def test_user_step_invalid_auth_shows_error(hass: HomeAssistant) -> None:
     """Bad creds -> form re-shown with invalid_auth error."""
     with _patched_client(login_ok=False):
-        result = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": SOURCE_USER}
-        )
+        result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -198,9 +184,7 @@ async def test_user_step_missing_mac_is_cannot_connect(
 ) -> None:
     """CU that returns no mac -> cannot_connect error (Decision #15)."""
     with _patched_client(has_mac=False):
-        result = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": SOURCE_USER}
-        )
+        result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -222,9 +206,7 @@ async def test_options_flow_sets_connection_timeout(hass: HomeAssistant) -> None
     )
 
     with _patched_client():
-        result = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": SOURCE_USER}
-        )
+        result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {

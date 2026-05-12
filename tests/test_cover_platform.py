@@ -44,9 +44,7 @@ class _StubCoordinator:
         self.cu_mac = cu_mac
         self.client = client or _StubClient()
         self.devices = devices
-        self.data: dict[int, Any] = {
-            i: d.state for i, d in devices.items()
-        }
+        self.data: dict[int, Any] = {i: d.state for i, d in devices.items()}
         self.last_update_success = True
 
     def signal_for(self, item_id: int) -> str:
@@ -57,11 +55,17 @@ class _StubCoordinator:
 
 
 def _cover_device(
-    item_id: int, type_: str = "SHUTTER", state: Any = 0,
+    item_id: int,
+    type_: str = "SHUTTER",
+    state: Any = 0,
 ) -> SwitchBeeDevice:
     return SwitchBeeDevice(
-        id=item_id, name=f"Cover {item_id}", hw="hw", type=type_,
-        zone="Zone", state=state,
+        id=item_id,
+        name=f"Cover {item_id}",
+        hw="hw",
+        type=type_,
+        zone="Zone",
+        state=state,
     )
 
 
@@ -72,10 +76,8 @@ def test_async_setup_entry_filters_shutter_louvered_somfy() -> None:
         2: _cover_device(2, "LOUVERED_SHUTTER", state=20),
         3: _cover_device(3, "SOMFY", state="STOP"),
         # Filtered out:
-        4: SwitchBeeDevice(id=4, name="S", hw="h", type="SWITCH",
-                           zone="Z", state="OFF"),
-        5: SwitchBeeDevice(id=5, name="D", hw="h", type="DIMMER",
-                           zone="Z", state=0),
+        4: SwitchBeeDevice(id=4, name="S", hw="h", type="SWITCH", zone="Z", state="OFF"),
+        5: SwitchBeeDevice(id=5, name="D", hw="h", type="DIMMER", zone="Z", state=0),
     }
     coordinator = _StubCoordinator(devices=devices)
     collected: list[SwitchBeeCover] = []
@@ -83,9 +85,7 @@ def test_async_setup_entry_filters_shutter_louvered_somfy() -> None:
     class _FakeEntry:
         entry_id = "test_entry"
 
-    fake_hass = type(
-        "FakeHass", (), {"data": {DOMAIN: {"test_entry": coordinator}}}
-    )()
+    fake_hass = type("FakeHass", (), {"data": {DOMAIN: {"test_entry": coordinator}}})()
 
     def _add(entities, update_before_add=False) -> None:
         collected.extend(entities)
@@ -149,7 +149,10 @@ async def test_shutter_stop_sends_stop_string(hass: HomeAssistant) -> None:
     ],
 )
 async def test_shutter_position_reads_from_cache(
-    hass: HomeAssistant, raw: int, expected_position: int, expected_closed: bool,
+    hass: HomeAssistant,
+    raw: int,
+    expected_position: int,
+    expected_closed: bool,
 ) -> None:
     dev = _cover_device(12, "SHUTTER", state=raw)
     coord = _StubCoordinator(devices={12: dev})
