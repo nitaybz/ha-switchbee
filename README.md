@@ -55,7 +55,13 @@ A separate migration tool (Phase 5) takes a stopped Home Assistant, finds the Sw
 
 ## Branding
 
-The integration ships with `icon.png` (256x256) and `logo.png` (790x256 wordmark), plus `@2x` retina variants, lifted from the SwitchBee brand mark and provided in this repo for HACS to render in the HA frontend. Once the integration's domain (`ha_switchbee`) is registered against [`home-assistant/brands`](https://github.com/home-assistant/brands), HA core will pull the brand from `brands.home-assistant.io` automatically. Until then, the in-repo PNGs are the source.
+The integration ships its brand mark in-repo. HACS renders these in the HA frontend, and HA core falls back to the in-package copies when it does not find a `brands.home-assistant.io` entry. No external brand submission is required for the integration to display correctly.
+
+- `icon.png` (256x256, transparent canvas, SwitchBee wordmark centered)
+- `icon@2x.png` (512x512 retina)
+- `logo.png` (790x256, full SwitchBee wordmark + tagline)
+- `logo@2x.png` (1580x512 retina)
+- The same four files mirrored under `custom_components/ha_switchbee/brands/` so HA core's fallback path also finds them.
 
 ## License
 
