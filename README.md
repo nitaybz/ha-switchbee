@@ -1,8 +1,10 @@
 # ha-switchbee
 
-A Home Assistant custom integration for the **SwitchBee Central Unit**, talking to the CU directly over its local WebSocket protocol on port `7891`. No cloud, no homebridge bridge, no HomeKit pairing dance. Push-based state updates from the CU surface as native HA state changes within ~1 second.
+<p align="center">
+  <img src="logo.png" alt="SwitchBee" height="120">
+</p>
 
-> Status: scaffold only. Phase 0 of the implementation plan. The protocol client, config flow, and entity platforms land in subsequent phases.
+A Home Assistant custom integration for the **SwitchBee Central Unit**, talking to the CU directly over its local WebSocket protocol on port `7891`. No cloud, no homebridge bridge, no HomeKit pairing dance. Push-based state updates from the CU surface as native HA state changes within ~1 second.
 
 ## Features (target)
 
@@ -50,6 +52,10 @@ The two integrations use structurally disjoint unique-ID grammars:
 Both grammars are checked statically and against a fixture before release; no homebridge entity can ever collide with an `ha-switchbee` entity.
 
 A separate migration tool (Phase 5) takes a stopped Home Assistant, finds the SwitchBee-shaped `homekit_controller` entity-registry rows, rewrites them in-place to `(platform=ha_switchbee, unique_id=<new-format>)` with `config_entry_id=None`, and lets the running integration adopt them on next startup. The migration preserves `entity_id`, `friendly_name`, `area_id`, `aliases`, `labels`, `icon`, and `original_name` for every real device. The HomeKit-only `button.*_identify` entries are removed during migration since they have no SwitchBee analog.
+
+## Branding
+
+The integration ships with `icon.png` (256x256) and `logo.png` (790x256 wordmark), plus `@2x` retina variants, lifted from the SwitchBee brand mark and provided in this repo for HACS to render in the HA frontend. Once the integration's domain (`ha_switchbee`) is registered against [`home-assistant/brands`](https://github.com/home-assistant/brands), HA core will pull the brand from `brands.home-assistant.io` automatically. Until then, the in-repo PNGs are the source.
 
 ## License
 
