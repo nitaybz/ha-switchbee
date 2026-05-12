@@ -16,21 +16,25 @@ runtime types, not just type hints.
 from __future__ import annotations
 
 import logging
-from typing import Any
-
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import aiohttp_client
+from typing import TYPE_CHECKING, Any
 
 from .const import DOMAIN
-from .coordinator import SwitchBeeCoordinator, async_build_coordinator
 from .switchbee_ws import (
     CUMACMissingError,
     SwitchBeeProtocolError,
     SwitchBeeWSClient,
 )
+
+# Home Assistant imports are deferred to call-time so that tools that only
+# need the protocol module (e.g. tools/probe.py and tools/migrate.py) can
+# import `custom_components.ha_switchbee.switchbee_ws` on operator boxes
+# that do not have Home Assistant installed in their Python env. Inside HA
+# itself these imports are free (HA is the importer), so there is no
+# runtime cost. Test code patches these names against this module so we
+# re-export them; the protocol module itself has zero HA dependency.
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,6 +64,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     those as `SwitchBeeProtocolError` with `INVALID_CREDENTIALS` in the
     message; mapping that distinction is a Phase 4 polish.
     """
+    # Deferred imports: HA is guaranteed available at runtime because HA
+    # is the importer; doing them here keeps the package importable on
+    # boxes that do not have HA installed (operator tooling, CI).
+    from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+    from homeassistant.exceptions import ConfigEntryNotReady
+    from homeassistant.helpers import aiohttp_client
+
+    from .coordinator import async_build_coordinator
+
     hass.data.setdefault(DOMAIN, {})
     session = aiohttp_client.async_get_clientsession(hass)
     client = SwitchBeeWSClient(
@@ -69,7 +82,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         session=session,
     )
     try:
-        coordinator: SwitchBeeCoordinator = await async_build_coordinator(
+        coordinator = await async_build_coordinator(
             hass, entry, client
         )
     except CUMACMissingError as err:
@@ -96,9 +109,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry: tear down the coordinator and platforms."""
-    coordinator: SwitchBeeCoordinator | None = (
-        hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
-    )
+    coordinator = hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
     unload_ok: Any = True
     if PLATFORMS:
         unload_ok = await hass.config_entries.async_unload_platforms(
@@ -109,7 +120,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return bool(unload_ok)
 
 
-def _make_unload_hook(coordinator: SwitchBeeCoordinator):
+def _make_unload_hook(coordinator):
     """Build an async callable HA can register via `entry.async_on_unload`."""
 
     async def _hook() -> None:

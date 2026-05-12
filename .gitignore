@@ -69,3 +69,4 @@ tests/fixtures/live/
 # Internal-only artifacts (not for the public repo)
 .cc10x/
 docs/plans/
+docs/qa-results/
