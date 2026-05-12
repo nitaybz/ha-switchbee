@@ -100,6 +100,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
+    # Register the SwitchBee Central Unit "bridge" device. Every per-item
+    # entity device targets this one as its `via_device`, so HA shows the
+    # full hierarchy (CU at the top, each switch/light/cover hanging off
+    # it). The CU device has no entities of its own; it exists as the
+    # grouping anchor.
+    from homeassistant.helpers import device_registry as dr  # lazy: HA only at runtime
+
+    device_reg = dr.async_get(hass)
+    device_reg.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, coordinator.cu_mac)},
+        manufacturer="SwitchBee",
+        name="SwitchBee Central Unit",
+        model="Central Unit",
+    )
+
     if PLATFORMS:
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

@@ -92,16 +92,28 @@ def test_unique_id_matches_cu_mac_underscore_item_id() -> None:
     assert re.match(r"^[0-9a-f]{12}_\d+$", entity.unique_id)
 
 
-def test_device_info_has_domain_cu_mac_identifier() -> None:
-    """device_info should carry `identifiers={(DOMAIN, cu_mac)}`."""
+def test_device_info_has_per_item_identifier_and_via_device() -> None:
+    """Each entity has its own per-item device anchored under the CU bridge.
+
+    `identifiers` carries the per-item key `(DOMAIN, "{cu_mac}_{item_id}")`
+    and `via_device` points at the CU bridge `(DOMAIN, cu_mac)`. The CU
+    bridge device itself is registered separately in `async_setup_entry`.
+    The device-level `name` is the full friendly label so HA can display
+    each switch as its own card without the "SwitchBee Central Unit"
+    prefix; `_attr_name = None` on the entity keeps HA from concatenating
+    the device name with an entity name.
+    """
     dev = _make_device(3)
     coordinator = _StubCoordinator(devices={3: dev})
     entity = SwitchBeeEntity(coordinator, dev)
     info = entity.device_info
     assert info is not None
-    # DeviceInfo behaves like a dict.
-    assert info["identifiers"] == {(DOMAIN, "a82108e7688f")}
+    assert info["identifiers"] == {(DOMAIN, "a82108e7688f_3")}
+    assert info["via_device"] == (DOMAIN, "a82108e7688f")
     assert info["manufacturer"] == "SwitchBee"
+    assert info["model"] == "SWITCH"
+    assert info["name"] == "Item 3 Zone"
+    assert info.get("suggested_area") == "Zone"
 
 
 def test_available_false_when_ws_disconnected() -> None:
@@ -141,26 +153,35 @@ def test_available_true_when_connected_and_state_ok() -> None:
     assert entity.available is True
 
 
-def test_has_entity_name_and_name_from_device_plus_zone() -> None:
-    """_attr_has_entity_name is True and name is `{device.name} {device.zone}`.
+def test_entity_name_is_none_so_device_name_is_used_verbatim() -> None:
+    """has_entity_name=True + _attr_name=None makes HA use device.name as-is.
 
-    Plan Phase 5b adoption requires the integration to emit the same
-    `original_name` shape (`name + ' ' + zone`) as the homekit_controller
-    accessory it migrates from (see `homebridge-switchbee/homekit/Switch.js:20`).
+    Apple Home (via HA's homekit integration) would otherwise emit
+    `<device.name> <_attr_name>` and prefix each accessory with the
+    device name. Setting `_attr_name = None` is the canonical HA pattern
+    for the "this entity IS its device" case.
+
+    The full friendly label lives on the device (`device_info.name`).
     """
     dev = _make_device(3)
     coordinator = _StubCoordinator(devices={3: dev})
     entity = SwitchBeeEntity(coordinator, dev)
     assert entity.has_entity_name is True
-    assert entity.name == "Item 3 Zone"
+    assert entity.name is None
+    info = entity.device_info
+    assert info is not None
+    assert info["name"] == "Item 3 Zone"
 
 
-def test_name_falls_back_to_device_name_when_zone_empty() -> None:
-    """Items with no zone assignment emit just the device name."""
+def test_device_name_falls_back_to_item_name_when_zone_empty() -> None:
+    """Items with no zone assignment use just the device name on the device."""
     dev = SwitchBeeDevice(id=4, name="Lone Item", hw="hw", type="SWITCH", zone="")
     coordinator = _StubCoordinator(devices={4: dev})
     entity = SwitchBeeEntity(coordinator, dev)
-    assert entity.name == "Lone Item"
+    info = entity.device_info
+    assert info is not None
+    assert info["name"] == "Lone Item"
+    assert entity.name is None
 
 
 @pytest.mark.parametrize(

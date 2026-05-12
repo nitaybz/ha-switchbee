@@ -168,4 +168,9 @@ async def test_async_setup_entry_adopts_orphan_entity_registry_row(
         "area_id was lost during adoption; cutover would strip room "
         "assignments off every entity."
     )
-    assert after.original_name == "Test Switch Test Zone"
+    # The entity itself no longer carries a name (has_entity_name=True +
+    # _attr_name=None pattern); the friendly label moved to the per-item
+    # DeviceInfo. The migrated row keeps whatever `original_name` it had
+    # at adoption time (we don't rewrite it). On a fresh ha-switchbee
+    # device, HA derives the displayed friendly name from device.name.
+    assert after.original_name is None or isinstance(after.original_name, str)

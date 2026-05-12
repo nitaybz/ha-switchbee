@@ -48,6 +48,10 @@ class SwitchBeeEntity(CoordinatorEntity["SwitchBeeCoordinator"]):
     that call `coordinator.client.operate(...)`.
     """
 
+    # has_entity_name=True + _attr_name=None makes HA display the entity
+    # using the device's name only (no "<device> <entity>" concatenation).
+    # The device name carries the full friendly label (e.g. "Blind 2
+    # Living Room"); the entity itself has no extra suffix.
     _attr_has_entity_name = True
 
     def __init__(
@@ -59,20 +63,34 @@ class SwitchBeeEntity(CoordinatorEntity["SwitchBeeCoordinator"]):
         self._device = device
         cu_mac = coordinator.cu_mac
         self._attr_unique_id = f"{cu_mac}_{device.id}"
-        # The entity name must match the HomeKit `accessory.name` format
-        # `name + ' ' + zone` (verified against homebridge-switchbee
-        # `homekit/Switch.js:20`) so the migration adoption (P6) preserves
-        # the original_name byte-for-byte from the homekit_controller row.
-        # See plan Phase 5b decision / line 1085. Zone may be empty for
-        # items whose CU configuration has no room assignment.
+        # No entity-side name: the device's `name` is the full friendly
+        # label, and `has_entity_name = True` makes HA show device.name
+        # as the entity's friendly_name directly.
+        self._attr_name = None
+
+        # The device label format `name + ' ' + zone` matches the HomeKit
+        # accessory name produced by the legacy homebridge plugin (verified
+        # against homebridge-switchbee/homekit/Switch.js:20) so user-set
+        # `name_by_user` overrides on the entity_registry stay coherent.
+        # Trailing whitespace is stripped so HA UI does not show "X  ".
         if device.zone:
-            self._attr_name = f"{device.name} {device.zone}"
+            device_name = f"{device.name} {device.zone}".strip()
         else:
-            self._attr_name = device.name
+            device_name = (device.name or "").strip()
+
+        # Each SwitchBee item is its own HA device (own identifier, own
+        # area, own per-device card). `via_device` links them under the
+        # SwitchBee Central Unit bridge device created in async_setup_entry.
+        # `suggested_area` lets HA auto-assign a brand-new device to an
+        # existing area when its zone string matches an area name; it has
+        # no effect on devices that already exist in the registry.
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, cu_mac)},
-            name="SwitchBee Central Unit",
+            identifiers={(DOMAIN, f"{cu_mac}_{device.id}")},
+            name=device_name,
             manufacturer="SwitchBee",
+            model=device.type,
+            via_device=(DOMAIN, cu_mac),
+            suggested_area=(device.zone or "").strip() or None,
         )
 
     @property
