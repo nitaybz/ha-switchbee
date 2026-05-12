@@ -34,9 +34,10 @@ from .switchbee_ws import (
 
 _LOGGER = logging.getLogger(__name__)
 
-# Platforms shipped by Phase 4. Phase 3 leaves this empty so HA's setup
-# does not try to forward to platforms that do not yet exist.
-PLATFORMS: list[str] = []
+# Platforms shipped by Phase 4. The four v1 platforms are switch, light,
+# cover, and scene. Any future platform (binary_sensor, sensor) lands here
+# after its Phase 4.x lift.
+PLATFORMS: list[str] = ["switch", "light", "cover", "scene"]
 
 __all__ = ["DOMAIN", "PLATFORMS", "async_setup_entry", "async_unload_entry"]
 
