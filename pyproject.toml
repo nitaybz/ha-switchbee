@@ -29,6 +29,12 @@ dev = [
     "pytest-asyncio>=0.23",
     "ruff>=0.5.0",
     "mypy>=1.10",
+    # aiohttp is provided by Home Assistant at runtime; pinned here only so
+    # the protocol module can be unit-tested in a plain Python 3.12 venv
+    # without a full HA install.
+    "aiohttp>=3.9",
+    # websockets is only used by the in-process fake CU server in tests.
+    "websockets>=12.0",
 ]
 
 [project.urls]
