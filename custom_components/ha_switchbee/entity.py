@@ -59,7 +59,16 @@ class SwitchBeeEntity(CoordinatorEntity["SwitchBeeCoordinator"]):
         self._device = device
         cu_mac = coordinator.cu_mac
         self._attr_unique_id = f"{cu_mac}_{device.id}"
-        self._attr_name = device.name
+        # The entity name must match the HomeKit `accessory.name` format
+        # `name + ' ' + zone` (verified against homebridge-switchbee
+        # `homekit/Switch.js:20`) so the migration adoption (P6) preserves
+        # the original_name byte-for-byte from the homekit_controller row.
+        # See plan Phase 5b decision / line 1085. Zone may be empty for
+        # items whose CU configuration has no room assignment.
+        if device.zone:
+            self._attr_name = f"{device.name} {device.zone}"
+        else:
+            self._attr_name = device.name
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, cu_mac)},
             name="SwitchBee Central Unit",

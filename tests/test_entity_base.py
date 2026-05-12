@@ -141,13 +141,26 @@ def test_available_true_when_connected_and_state_ok() -> None:
     assert entity.available is True
 
 
-def test_has_entity_name_and_name_from_device() -> None:
-    """_attr_has_entity_name is True and name comes from device.name."""
+def test_has_entity_name_and_name_from_device_plus_zone() -> None:
+    """_attr_has_entity_name is True and name is `{device.name} {device.zone}`.
+
+    Plan Phase 5b adoption requires the integration to emit the same
+    `original_name` shape (`name + ' ' + zone`) as the homekit_controller
+    accessory it migrates from (see `homebridge-switchbee/homekit/Switch.js:20`).
+    """
     dev = _make_device(3)
     coordinator = _StubCoordinator(devices={3: dev})
     entity = SwitchBeeEntity(coordinator, dev)
     assert entity.has_entity_name is True
-    assert entity.name == "Item 3"
+    assert entity.name == "Item 3 Zone"
+
+
+def test_name_falls_back_to_device_name_when_zone_empty() -> None:
+    """Items with no zone assignment emit just the device name."""
+    dev = SwitchBeeDevice(id=4, name="Lone Item", hw="hw", type="SWITCH", zone="")
+    coordinator = _StubCoordinator(devices={4: dev})
+    entity = SwitchBeeEntity(coordinator, dev)
+    assert entity.name == "Lone Item"
 
 
 @pytest.mark.parametrize(
