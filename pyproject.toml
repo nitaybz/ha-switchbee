@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ha_switchbee"
+version = "0.1.0"
+description = "Home Assistant custom integration for SwitchBee Central Unit over the local WebSocket protocol."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "nitaybz" }]
+keywords = ["home-assistant", "homeassistant", "hacs", "switchbee", "smart-home"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: AsyncIO",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Home Automation",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5.0",
+    "mypy>=1.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/nitaybz/ha-switchbee"
+Issues = "https://github.com/nitaybz/ha-switchbee/issues"
+
+[tool.setuptools]
+# Bare scaffold for Phase 0. Real packaging metadata lands when the
+# integration ships as a real Python package, not just a HA custom_component.
+# The directory still installs because setuptools auto-discovers it.
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["custom_components*"]
+exclude = ["tests*", "tools*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# Conservative starter set. Phase 1+ can broaden.
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+ignore_missing_imports = true

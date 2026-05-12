@@ -1,0 +1,23 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SwitchBee Local",
+        "description": "Connect to your SwitchBee Central Unit over the local network.",
+        "data": {
+          "host": "Host or IP address",
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the Central Unit.",
+      "invalid_auth": "Invalid username or password.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This Central Unit is already configured."
+    }
+  }
+}
