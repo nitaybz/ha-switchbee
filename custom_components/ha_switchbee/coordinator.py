@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 from collections import deque
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any
 
 from .const import DOMAIN, SIGNAL_PUSH
@@ -130,6 +130,19 @@ class SwitchBeeCoordinator:
             window_seconds=LOGIN_TIMEOUT_WINDOW_SECONDS,
         )
         self._unsub_listener = client.add_listener(self._on_push)
+        # HA `CoordinatorEntity.async_added_to_hass` calls
+        # `coordinator.async_add_listener(update_callback)` at attach time.
+        # We are not subclassing DataUpdateCoordinator (see class docstring),
+        # so satisfy that contract ourselves with a tiny callback registry.
+        # Each entry is a zero-arg callable; called whenever push state changes
+        # so CoordinatorEntity can recompute its derived state. The per-item
+        # dispatcher signal (added by entity.async_added_to_hass) is the
+        # finer-grained path actually used in v1; this fan-out exists to keep
+        # the CoordinatorEntity attach contract honored.
+        self._update_listeners: list[Callable[[], None]] = []
+        # Stays in sync with `data` for compatibility with downstream code
+        # that reads `last_update_success` from a DataUpdateCoordinator.
+        self.last_update_success = True
 
     def devices_by_platform(self) -> dict[str, list[SwitchBeeDevice]]:
         """Group the device dict by HA platform string.
@@ -161,6 +174,55 @@ class SwitchBeeCoordinator:
             self._signal_for(event.id),
             event.value,
         )
+        # Fan out to coordinator-level listeners (CoordinatorEntity contract).
+        # Iterate a copy so a listener may unsubscribe itself.
+        for cb in list(self._update_listeners):
+            try:
+                cb()
+            except Exception:  # pragma: no cover
+                _LOGGER.exception("coordinator listener raised")
+
+    def async_add_listener(
+        self,
+        update_callback: Callable[[], None],
+        context: Any = None,
+    ) -> Callable[[], None]:
+        """Register a zero-arg callback fired on every push update.
+
+        Matches the `DataUpdateCoordinator.async_add_listener` signature
+        that HA's `CoordinatorEntity.async_added_to_hass` calls at attach
+        time. Returns an unsubscribe callable.
+
+        The `context` arg is accepted for HA-API parity and ignored: the
+        per-item dispatcher signal (`signal_for(item_id)`) is the path
+        actually used by platform entities; this fan-out is only the
+        coarse-grained CoordinatorEntity hook.
+        """
+        del context  # unused, parity with HA's signature
+        self._update_listeners.append(update_callback)
+
+        def _remove() -> None:
+            import contextlib
+
+            with contextlib.suppress(ValueError):
+                self._update_listeners.remove(update_callback)
+
+        return _remove
+
+    @property
+    def update_interval(self) -> None:
+        """CoordinatorEntity checks this; v1 is push-only, no polling."""
+        return None
+
+    async def async_request_refresh(self) -> None:
+        """No-op. CoordinatorEntity calls this on attach in some HA versions.
+
+        v1 is push-only: state arrives via CONFIGURATION_CHANGE notifications,
+        not polled refreshes. A request-refresh fires a one-shot pull of the
+        CU state via `GET_MULTIPLE_STATES` if a future caller needs it; for
+        now we are a no-op because the WS subscription is already live.
+        """
+        return None
 
     def _signal_for(self, item_id: int) -> str:
         """Dispatcher signal name for one item id."""
