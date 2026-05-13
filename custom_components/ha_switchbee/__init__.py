@@ -111,8 +111,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if PLATFORMS:
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Start the reconciliation poll. The push stream is the primary path
+    # (every CONFIGURATION_CHANGE arrives in ~1s); the poll is a safety
+    # net for any missed push. Interval is configurable via the
+    # OptionsFlow; 0 disables. Default lives in const.py.
+    from .const import CONF_POLL_INTERVAL_SECONDS, DEFAULT_POLL_INTERVAL_SECONDS
+
+    poll_interval = int(
+        entry.options.get(CONF_POLL_INTERVAL_SECONDS, DEFAULT_POLL_INTERVAL_SECONDS)
+    )
+    coordinator.async_start_poll_task(poll_interval)
+
+    # Reload-on-options-change so the OptionsFlow can change the poll
+    # interval at runtime without an HA restart.
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     entry.async_on_unload(_make_unload_hook(coordinator))
     return True
+
+
+async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload the entry when its options change.
+
+    OptionsFlow currently exposes connection_timeout (changes the WS
+    timeout for future commands) and poll_interval_seconds (changes the
+    reconciliation cadence). The simplest correct path is to ask HA to
+    reload the entry so the WS client and the poll task get rebuilt with
+    the new values.
+    """
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

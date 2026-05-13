@@ -39,6 +39,17 @@ _LOGGER = logging.getLogger(__name__)
 CONF_CONNECTION_TIMEOUT = "connection_timeout"
 DEFAULT_CONNECTION_TIMEOUT: int = 5
 
+# Option key for the reconciliation poll interval (seconds). The poll is
+# the safety net for missed push notifications: every N seconds the
+# coordinator pulls GET_MULTIPLE_STATES for every known item and
+# dispatches signals for any whose state differs from the cache. Set to
+# 0 to disable. See `coordinator.async_start_poll_task` for the runtime
+# wiring and `const.py` for the canonical default + clamp range.
+from .const import (  # noqa: E402  - local re-export of const keys
+    CONF_POLL_INTERVAL_SECONDS,
+    DEFAULT_POLL_INTERVAL_SECONDS,
+)
+
 
 def _non_empty_string(value: Any) -> str:
     """Voluptuous validator: must be a non-empty string after stripping."""
@@ -58,6 +69,20 @@ def _positive_int(value: Any) -> int:
     return value
 
 
+def _non_negative_int(value: Any) -> int:
+    """Voluptuous validator: must be a non-negative int (no booleans).
+
+    Zero is allowed because it is the sentinel for "disable the poll".
+    """
+    if isinstance(value, bool):
+        raise vol.Invalid("must be an integer, not a bool")
+    if not isinstance(value, int):
+        raise vol.Invalid("must be an integer")
+    if value < 0:
+        raise vol.Invalid("must be >= 0")
+    return value
+
+
 # Schema for the initial `user` step. All three fields are required and
 # non-empty; the password is not echoed back so the form does not expose it
 # to retries.
@@ -69,15 +94,19 @@ USER_DATA_SCHEMA = vol.Schema(
     }
 )
 
-# Schema for the OptionsFlow. Currently a single tunable: connection timeout
-# in seconds. Default is `DEFAULT_CONNECTION_TIMEOUT` (5s) to match the
-# protocol module's LOGIN timeout.
+# Schema for the OptionsFlow. Two tunables:
+# - connection_timeout: WS LOGIN / per-command timeout (seconds).
+# - poll_interval_seconds: state reconciliation poll cadence. Zero disables.
 OPTIONS_SCHEMA = vol.Schema(
     {
         vol.Optional(
             CONF_CONNECTION_TIMEOUT,
             default=DEFAULT_CONNECTION_TIMEOUT,
         ): _positive_int,
+        vol.Optional(
+            CONF_POLL_INTERVAL_SECONDS,
+            default=DEFAULT_POLL_INTERVAL_SECONDS,
+        ): _non_negative_int,
     }
 )
 

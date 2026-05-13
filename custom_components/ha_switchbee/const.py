@@ -23,6 +23,19 @@ SIGNAL_REFRESH: Final[str] = f"{DOMAIN}_refresh"
 # Real value tuned in Phase 3.
 DEFAULT_SCAN_INTERVAL_SECONDS: Final[int] = 60
 
+# Periodic state reconciliation. The integration is push-first (every
+# CONFIGURATION_CHANGE arrives on the WebSocket within ~1s of the CU
+# observing the state change), but a missed push leaves the cache stale
+# until the next push for the same item. The poll task runs every
+# `DEFAULT_POLL_INTERVAL_SECONDS` and calls GET_MULTIPLE_STATES on every
+# known item; any state that differs from `coordinator.data` dispatches
+# the same signal a real push would have, so the entity catches up.
+# Set the option to 0 to disable the safety poll entirely.
+CONF_POLL_INTERVAL_SECONDS: Final[str] = "poll_interval_seconds"
+DEFAULT_POLL_INTERVAL_SECONDS: Final[int] = 60
+MIN_POLL_INTERVAL_SECONDS: Final[int] = 15
+MAX_POLL_INTERVAL_SECONDS: Final[int] = 3600
+
 # ---------------------------------------------------------------------------
 # Protocol contract (Decision #4 - Discovery Gate).
 #

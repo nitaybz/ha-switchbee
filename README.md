@@ -39,6 +39,13 @@ Configuration is via the HA UI (config flow). Required fields:
 
 The integration discovers all devices and zones via `GET_CONFIGURATION`, mirrors them as HA entities, and listens for push state updates.
 
+### Options
+
+Open **Settings → Devices & services → SwitchBee Local → Configure** to tune:
+
+- **Connection timeout** (seconds, default `5`): WebSocket LOGIN and per-command timeout.
+- **Poll interval** (seconds, default `60`, `0` to disable): periodic reconciliation. The CU pushes every state change in real time over the WebSocket; the poll is a defensive safety net for any push that gets dropped (transient WS drop, missed event, etc). Every N seconds the integration fetches `GET_MULTIPLE_STATES` for every known item and dispatches an update only for items whose state differs from the cache. Set to `0` to rely on pushes exclusively.
+
 ## Coexistence with `homebridge-switchbee`
 
 During QA and rollout, `ha-switchbee` is designed to run side-by-side with the existing `homebridge-switchbee → homekit_controller` integration on the same Home Assistant instance, without `unique_id` collision.

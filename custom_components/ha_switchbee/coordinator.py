@@ -13,12 +13,19 @@ installed (see `tests/test_coordinator_internal.py`).
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 from collections import deque
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any
 
-from .const import DOMAIN, SIGNAL_PUSH
+from .const import (
+    DOMAIN,
+    MAX_POLL_INTERVAL_SECONDS,
+    MIN_POLL_INTERVAL_SECONDS,
+    SIGNAL_PUSH,
+)
 from .mapping import map_type_to_platform
 from .models import SwitchBeeDevice
 from .switchbee_ws import PushEvent, SwitchBeeWSClient, normalize_cu_mac
@@ -137,6 +144,11 @@ class SwitchBeeCoordinator:
         # Stays in sync with `data` for compatibility with downstream code
         # that reads `last_update_success` from a DataUpdateCoordinator.
         self.last_update_success = True
+        # Reconciliation poll task. Started by async_setup_entry via
+        # async_start_poll_task; cancelled on async_shutdown. None until
+        # the entry sets it up so the bare coordinator (and the watchdog
+        # unit tests) stay HA-free.
+        self._poll_task: asyncio.Task[None] | None = None
 
     def devices_by_platform(self) -> dict[str, list[SwitchBeeDevice]]:
         """Group the device dict by HA platform string.
@@ -226,8 +238,137 @@ class SwitchBeeCoordinator:
         """Public signal name accessor for platform entities."""
         return self._signal_for(item_id)
 
+    def async_start_poll_task(self, interval_seconds: int) -> None:
+        """Start the periodic state-reconciliation task.
+
+        The push stream is the primary source of truth (every
+        CONFIGURATION_CHANGE arrives within ~1s of the physical state
+        change). This task is a defensive guard: every `interval_seconds`,
+        it fetches GET_MULTIPLE_STATES for every known item and dispatches
+        the per-item signal for any item whose state differs from
+        `self.data`. Items whose state matches the cache fire NO signal
+        (no needless HA state writes).
+
+        Pass `interval_seconds <= 0` to disable polling entirely.
+
+        Idempotent: cancels and replaces an existing task. Safe to call
+        from `async_setup_entry` and from the OptionsFlow update listener.
+        """
+        # Cancel any prior task (OptionsFlow update path).
+        if self._poll_task is not None and not self._poll_task.done():
+            self._poll_task.cancel()
+            self._poll_task = None
+
+        if interval_seconds <= 0:
+            _LOGGER.debug("poll task disabled (interval=%s)", interval_seconds)
+            return
+
+        # Clamp into the documented range so a misconfigured option does
+        # not accidentally hammer the CU.
+        clamped = max(
+            MIN_POLL_INTERVAL_SECONDS,
+            min(MAX_POLL_INTERVAL_SECONDS, int(interval_seconds)),
+        )
+        if clamped != interval_seconds:
+            _LOGGER.info(
+                "poll interval %ss clamped to %ss (allowed range: %s..%s)",
+                interval_seconds,
+                clamped,
+                MIN_POLL_INTERVAL_SECONDS,
+                MAX_POLL_INTERVAL_SECONDS,
+            )
+        self._poll_task = self.hass.loop.create_task(
+            self._poll_loop(clamped),
+            name=f"ha_switchbee_poll_{self.cu_mac}",
+        )
+
+    async def _poll_loop(self, interval_seconds: int) -> None:
+        """Run GET_MULTIPLE_STATES every `interval_seconds` and reconcile drift.
+
+        Failure modes are caught and logged at WARNING; the loop keeps
+        running. Cancellation is the only way out (via `async_shutdown`).
+        """
+        # First iteration sleeps the full interval. The integration just
+        # fetched GET_CONFIGURATION at startup so the cache is fresh; no
+        # value polling immediately afterwards.
+        while True:
+            try:
+                await asyncio.sleep(interval_seconds)
+            except asyncio.CancelledError:
+                raise
+            try:
+                await self._reconcile_once()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                _LOGGER.warning(
+                    "reconciliation poll failed; retrying in %ss",
+                    interval_seconds,
+                    exc_info=True,
+                )
+
+    async def _reconcile_once(self) -> int:
+        """Pull current state of every known item and dispatch on drift.
+
+        Returns the number of items whose state changed since the last
+        cache write (also the number of dispatcher signals fired). Public
+        so tests can call it directly without the timing loop.
+        """
+        item_ids = list(self.devices.keys())
+        if not item_ids:
+            return 0
+        # Skip while disconnected: GET_MULTIPLE_STATES would queue or
+        # fail, and a fresh GET_CONFIGURATION runs on every reconnect
+        # anyway, so the cache catches up automatically.
+        if not getattr(self.client, "connected", True):
+            _LOGGER.debug("poll skipped: WS disconnected")
+            return 0
+
+        states = await self.client.get_multiple_states(item_ids)
+        # Lazy import so the coordinator stays importable without HA in
+        # the standalone protocol unit tests.
+        from homeassistant.helpers.dispatcher import async_dispatcher_send
+
+        drift_count = 0
+        for item_id, new_value in states.items():
+            cached = self.data.get(item_id)
+            if cached == new_value:
+                continue
+            drift_count += 1
+            _LOGGER.info(
+                "poll reconciled drift on item %s: %r -> %r",
+                item_id,
+                cached,
+                new_value,
+            )
+            self.data[item_id] = new_value
+            async_dispatcher_send(
+                self.hass,
+                self._signal_for(item_id),
+                new_value,
+            )
+            # Fan out to coordinator-level listeners too so any
+            # CoordinatorEntity that subscribed via async_add_listener
+            # picks up the change.
+            for cb in list(self._update_listeners):
+                try:
+                    cb()
+                except Exception:  # pragma: no cover
+                    _LOGGER.exception("coordinator listener raised")
+        if drift_count:
+            _LOGGER.info(
+                "poll reconciled %d item(s) with drifted state",
+                drift_count,
+            )
+        return drift_count
+
     async def async_shutdown(self) -> None:
-        """Unsubscribe the push listener and stop the WS client."""
+        """Unsubscribe the push listener, stop the poll task, stop the WS client."""
+        if self._poll_task is not None and not self._poll_task.done():
+            self._poll_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._poll_task
+            self._poll_task = None
         self._unsub_listener()
         await self.client.stop()
 

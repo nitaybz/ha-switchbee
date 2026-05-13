@@ -200,7 +200,16 @@ async def test_user_step_missing_mac_is_cannot_connect(
 
 
 async def test_options_flow_sets_connection_timeout(hass: HomeAssistant) -> None:
-    """OptionsFlow accepts the connection_timeout tunable."""
+    """OptionsFlow accepts the connection_timeout tunable.
+
+    The integration registers an `add_update_listener` hook that reloads
+    the config entry whenever options change so the WS client and the
+    reconciliation poll task pick up the new values. The reload re-enters
+    `async_setup_entry`, which calls `SwitchBeeWSClient.start()`; keep
+    `_patched_client()` active for the WHOLE test (including the
+    `async_block_till_done()` after the options submit) so the reload
+    finds a fake client instead of trying to reach a real CU.
+    """
     from custom_components.ha_switchbee.config_flow import (
         CONF_CONNECTION_TIMEOUT,
     )
@@ -216,16 +225,15 @@ async def test_options_flow_sets_connection_timeout(hass: HomeAssistant) -> None
             },
         )
         await hass.async_block_till_done()
+        entry = result["result"]
 
-    entry = result["result"]
+        options = await hass.config_entries.options.async_init(entry.entry_id)
+        assert options["type"] == FlowResultType.FORM
+        assert options["step_id"] == "init"
 
-    options = await hass.config_entries.options.async_init(entry.entry_id)
-    assert options["type"] == FlowResultType.FORM
-    assert options["step_id"] == "init"
-
-    options = await hass.config_entries.options.async_configure(
-        options["flow_id"], {CONF_CONNECTION_TIMEOUT: 12}
-    )
-    await hass.async_block_till_done()
-    assert options["type"] == FlowResultType.CREATE_ENTRY
-    assert entry.options.get(CONF_CONNECTION_TIMEOUT) == 12
+        options = await hass.config_entries.options.async_configure(
+            options["flow_id"], {CONF_CONNECTION_TIMEOUT: 12}
+        )
+        await hass.async_block_till_done()
+        assert options["type"] == FlowResultType.CREATE_ENTRY
+        assert entry.options.get(CONF_CONNECTION_TIMEOUT) == 12
