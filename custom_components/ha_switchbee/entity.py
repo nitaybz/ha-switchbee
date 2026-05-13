@@ -125,7 +125,16 @@ class SwitchBeeEntity(CoordinatorEntity["SwitchBeeCoordinator"]):
         # without tripping HA's thread-safety / unattached-entity guards.
         if getattr(self, "_platform_state", None) is not EntityPlatformState.ADDED:
             return
-        self.async_write_ha_state()
+        # `async_dispatcher_send` fires registered listeners synchronously,
+        # but HA delivers some sync listeners via the executor pool (we have
+        # observed SyncWorker_* threads in the traceback). Calling
+        # `async_write_ha_state` from a non-event-loop thread raises
+        # RuntimeError and the state update is dropped, leaving the HA
+        # frontend stuck on the previous value even though
+        # `coordinator.data` has the fresh state. Hop back to the event
+        # loop with `call_soon_threadsafe` so the write always runs in the
+        # right thread.
+        self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
 
 
 __all__ = ["SwitchBeeEntity"]
